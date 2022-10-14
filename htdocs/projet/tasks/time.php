@@ -340,10 +340,18 @@ if ($action == 'confirm_generateinvoice')
 		include_once DOL_DOCUMENT_ROOT.'/projet/class/project.class.php';
 		include_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
 
+		$customer = new Societe($db);
 		$tmpinvoice = new Facture($db);
 		$tmptimespent = new Task($db);
 		$tmpproduct = new Product($db);
 		$fuser = new User($db);
+
+		//#19912 get customer to take default payment terms and others
+		$resultCustomer = $customer->fetch($projectstatic->thirdparty->id);
+		if ($resultCustomer <= 0) {
+			$error++;
+			setEventMessages($customer->error, $customer->errors, 'errors');
+		}
 
 		$db->begin();
 		$idprod = GETPOST('productid', 'int');
@@ -384,6 +392,9 @@ if ($action == 'confirm_generateinvoice')
 		$tmpinvoice->socid = $projectstatic->thirdparty->id;
 		$tmpinvoice->date = dol_mktime(GETPOST('rehour', 'int'), GETPOST('remin', 'int'), GETPOST('resec', 'int'), GETPOST('remonth', 'int'), GETPOST('reday', 'int'), GETPOST('reyear', 'int'));
 		$tmpinvoice->fk_project = $projectstatic->id;
+		$tmpinvoice->cond_reglement_id = $customer->cond_reglement_id;
+		$tmpinvoice->mode_reglement_id = $customer->mode_reglement_id;
+		$tmpinvoice->fk_account = $customer->fk_account;
 
 		if ($invoiceToUse) {
 			$tmpinvoice->fetch($invoiceToUse);
