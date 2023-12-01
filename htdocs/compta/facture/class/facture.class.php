@@ -5597,8 +5597,15 @@ class Facture extends CommonInvoice
 								$email_tobcc = $arraymessage->email_tobcc;
 							}
 
+							//join file is asked
+							$joinFile = $joinFileName = $joinFileMime = [];
+							if ($arraymessage->joinfiles == 1 && !empty($tmpinvoice->last_main_doc)) {
+								$joinFile = array(DOL_DATA_ROOT.'/'.$tmpinvoice->last_main_doc);
+								$joinFileName = array(basename($tmpinvoice->last_main_doc));
+								$joinFileMime = array(dol_mimetype(DOL_DATA_ROOT.'/'.$tmpinvoice->last_main_doc));
+							}
 							// Mail Creation
-							$cMailFile = new CMailFile($sendTopic, $to, $from, $sendContent, array(), array(), array(), $email_tocc, $email_tobcc, 0, 1, $errors_to, '', $trackid, '', $sendcontext, '');
+							$cMailFile = new CMailFile($sendTopic, $to, $from, $sendContent, $joinFile, $joinFileMime, $joinFileName, $email_tocc, $email_tobcc, 0, 1, $errors_to, '', $trackid, '', $sendcontext, '');
 
 							// Sending Mail
 							if ($cMailFile->sendfile()) {
