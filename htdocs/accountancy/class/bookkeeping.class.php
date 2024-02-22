@@ -740,7 +740,7 @@ class BookKeeping extends CommonObject
 		$sql .= " t.date_validated as date_validation";
 		$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.$mode.' as t';
 		$sql .= ' WHERE 1 = 1';
-		$sql .= " AND entity = " . ((int) $conf->entity); // Do not use getEntity for accounting features
+		$sql .= " AND entity = " . ((int) $this->entity); // Do not use getEntity for accounting features
 		if (null !== $ref) {
 			$sql .= " AND t.ref = '".$this->db->escape($ref)."'";
 		} else {
@@ -885,7 +885,7 @@ class BookKeeping extends CommonObject
 		}
 		$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.' as t';
 		$sql .= ' WHERE 1 = 1';
-		$sql .= " AND entity = " . ((int) $conf->entity); // Do not use getEntity for accounting features
+		$sql .= " AND entity = " . ((int) $this->entity); // Do not use getEntity for accounting features
 		if (count($sqlwhere) > 0) {
 			$sql .= ' AND '.implode(' '.$filtermode.' ', $sqlwhere);
 		}
@@ -1480,7 +1480,7 @@ class BookKeeping extends CommonObject
 		if (!empty($journal)) {
 			$sql .= " AND code_journal = '".$this->db->escape($journal)."'";
 		}
-		$sql .= " AND entity = " . ((int) $conf->entity); // Do not use getEntity for accounting features
+		$sql .= " AND entity = " . ((int) $this->entity); // Do not use getEntity for accounting features
 		// Exclusion of validated entries at the time of deletion
 		$sql .= " AND date_validated IS NULL";
 
@@ -1519,7 +1519,7 @@ class BookKeeping extends CommonObject
 		$sql .= " FROM ".MAIN_DB_PREFIX.$this->table_element;
 		$sql .= " WHERE piece_num = ".(int) $piecenum;
 		$sql .= " AND date_validated IS NULL";		// For security, exclusion of validated entries at the time of deletion
-		$sql .= " AND entity = " . ((int) $conf->entity); // Do not use getEntity for accounting features
+		$sql .= " AND entity = " . ((int) $this->entity); // Do not use getEntity for accounting features
 
 		$resql = $this->db->query($sql);
 
@@ -1641,7 +1641,7 @@ class BookKeeping extends CommonObject
 		}
 		$sql .= " FROM ".MAIN_DB_PREFIX.$this->table_element.$mode;
 		$sql .= " WHERE piece_num = ".$piecenum;
-		$sql .= " AND entity = " . ((int) $conf->entity); // Do not use getEntity for accounting features
+		$sql .= " AND entity = " . ((int) $this->entity); // Do not use getEntity for accounting features
 
 		dol_syslog(__METHOD__, LOG_DEBUG);
 		$result = $this->db->query($sql);
@@ -1721,7 +1721,7 @@ class BookKeeping extends CommonObject
 		}
 		$sql .= " FROM ".MAIN_DB_PREFIX.$this->table_element.$mode;
 		$sql .= " WHERE piece_num = ".$piecenum;
-		$sql .= " AND entity = " . ((int) $conf->entity); // Do not use getEntity for accounting features
+		$sql .= " AND entity = " . ((int) $this->entity); // Do not use getEntity for accounting features
 
 		dol_syslog(__METHOD__, LOG_DEBUG);
 		$result = $this->db->query($sql);
@@ -1861,14 +1861,14 @@ class BookKeeping extends CommonObject
 			$sql .= ' doc_ref, fk_doc, fk_docdet, entity, thirdparty_code, subledger_account, subledger_label,';
 			$sql .= ' numero_compte, label_compte, label_operation, debit, credit,';
 			$sql .= ' montant, sens, fk_user_author, import_key, code_journal, journal_label, '.$next_piecenum.", '".$this->db->idate($now)."'";
-			$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.'_tmp WHERE piece_num = '.((int) $piece_num).' AND numero_compte IS NOT NULL AND entity = ' .((int) $conf->entity);
+			$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.'_tmp WHERE piece_num = '.((int) $piece_num).' AND numero_compte IS NOT NULL AND entity = ' .((int) $this->entity);
 			$resql = $this->db->query($sql);
 			if (!$resql) {
 				$error++;
 				$this->errors[] = 'Error '.$this->db->lasterror();
 				dol_syslog(__METHOD__.' '.join(',', $this->errors), LOG_ERR);
 			}
-			$sql = 'DELETE FROM '.MAIN_DB_PREFIX.$this->table_element.'_tmp WHERE piece_num = '.((int) $piece_num).' AND entity = ' .((int) $conf->entity);
+			$sql = 'DELETE FROM '.MAIN_DB_PREFIX.$this->table_element.'_tmp WHERE piece_num = '.((int) $piece_num).' AND entity = ' .((int) $this->entity);
 			$resql = $this->db->query($sql);
 			if (!$resql) {
 				$error++;
@@ -1876,7 +1876,7 @@ class BookKeeping extends CommonObject
 				dol_syslog(__METHOD__.' '.join(',', $this->errors), LOG_ERR);
 			}
 		} elseif ($direction == 1) {
-			$sql = 'DELETE FROM '.MAIN_DB_PREFIX.$this->table_element.'_tmp WHERE piece_num = '.((int) $piece_num).' AND entity = ' .((int) $conf->entity);
+			$sql = 'DELETE FROM '.MAIN_DB_PREFIX.$this->table_element.'_tmp WHERE piece_num = '.((int) $piece_num).' AND entity = ' .((int) $this->entity);
 			$resql = $this->db->query($sql);
 			if (!$resql) {
 				$error++;
@@ -1891,14 +1891,14 @@ class BookKeeping extends CommonObject
 			$sql .= ' doc_ref, fk_doc, fk_docdet, thirdparty_code, subledger_account, subledger_label,';
 			$sql .= ' numero_compte, label_compte, label_operation, debit, credit,';
 			$sql .= ' montant, sens, fk_user_author, import_key, code_journal, journal_label, piece_num';
-			$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.' WHERE piece_num = '.((int) $piece_num).' AND entity = ' .((int) $conf->entity);
+			$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.' WHERE piece_num = '.((int) $piece_num).' AND entity = ' .((int) $this->entity);
 			$resql = $this->db->query($sql);
 			if (!$resql) {
 				$error++;
 				$this->errors[] = 'Error '.$this->db->lasterror();
 				dol_syslog(__METHOD__.' '.join(',', $this->errors), LOG_ERR);
 			}
-			$sql = 'DELETE FROM '.MAIN_DB_PREFIX.$this->table_element.'_tmp WHERE piece_num = '.((int) $piece_num).' AND entity = ' .((int) $conf->entity);
+			$sql = 'DELETE FROM '.MAIN_DB_PREFIX.$this->table_element.'_tmp WHERE piece_num = '.((int) $piece_num).' AND entity = ' .((int) $this->entity);
 			$resql = $this->db->query($sql);
 			if (!$resql) {
 				$error++;

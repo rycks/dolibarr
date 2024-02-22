@@ -422,7 +422,7 @@ class Delivery extends CommonObject
 					$sql .= " FROM ".MAIN_DB_PREFIX."delivery";
 					$sql .= " WHERE ref = '".$this->db->escape($numref)."'";
 					$sql .= " AND fk_statut <> 0";
-					$sql .= " AND entity = ".((int) $conf->entity);
+					$sql .= " AND entity = ".((int) $conf->entity); //select -> getEntity ?
 
 					$resql = $this->db->query($sql);
 					if ($resql) {
@@ -463,7 +463,7 @@ class Delivery extends CommonObject
 						if (preg_match('/^[\(]?PROV/i', $this->ref)) {
 							// Now we rename also files into index
 							$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filename = CONCAT('".$this->db->escape($this->newref)."', SUBSTR(filename, ".(strlen($this->ref) + 1).")), filepath = 'expedition/receipt/".$this->db->escape($this->newref)."'";
-							$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%' AND filepath = 'expedition/receipt/".$this->db->escape($this->ref)."' and entity = ".((int) $conf->entity);
+							$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%' AND filepath = 'expedition/receipt/".$this->db->escape($this->ref)."' and entity = ".((int) $this->entity);
 							$resql = $this->db->query($sql);
 							if (!$resql) {
 								$error++; $this->error = $this->db->lasterror();

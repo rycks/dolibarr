@@ -1028,7 +1028,7 @@ class Project extends CommonObject
 			$sql = "UPDATE ".MAIN_DB_PREFIX."projet";
 			$sql .= " SET fk_statut = 1";
 			$sql .= " WHERE rowid = ".((int) $this->id);
-			$sql .= " AND entity = ".((int) $conf->entity);
+			$sql .= " AND entity = ".((int) $this->entity);
 
 			dol_syslog(get_class($this)."::setValid", LOG_DEBUG);
 			$resql = $this->db->query($sql);

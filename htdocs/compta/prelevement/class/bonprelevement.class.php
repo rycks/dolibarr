@@ -361,7 +361,7 @@ class BonPrelevement extends CommonObject
 			$sql .= ", statut = ".self::STATUS_CREDITED;
 			$sql .= ", date_credit = '".$this->db->idate($date)."'";
 			$sql .= " WHERE rowid=".((int) $this->id);
-			$sql .= " AND entity = ".((int) $conf->entity);
+			$sql .= " AND entity = ".((int) $this->entity);
 			$sql .= " AND statut = ".self::STATUS_TRANSFERED;
 
 			$resql = $this->db->query($sql);
@@ -514,7 +514,7 @@ class BonPrelevement extends CommonObject
 			$sql .= " , method_trans = ".((int) $method);
 			$sql .= " , statut = ".self::STATUS_TRANSFERED;
 			$sql .= " WHERE rowid = ".((int) $this->id);
-			$sql .= " AND entity = ".((int) $conf->entity);
+			$sql .= " AND entity = ".((int) $this->entity);
 			$sql .= " AND statut = 0";
 
 			if ($this->db->query($sql)) {
@@ -920,7 +920,7 @@ class BonPrelevement extends CommonObject
 				$sql = "SELECT substring(ref from char_length(ref) - 1)";
 				$sql .= " FROM ".MAIN_DB_PREFIX."prelevement_bons";
 				$sql .= " WHERE ref LIKE '%".$this->db->escape($ref)."%'";
-				$sql .= " AND entity = ".((int) $conf->entity);
+				$sql .= " AND entity = ".((int) $conf->entity); //select -> use GetEntity ?
 				$sql .= " ORDER BY ref DESC LIMIT 1";
 
 				dol_syslog(get_class($this)."::create sql=".$sql, LOG_DEBUG);
@@ -1070,7 +1070,7 @@ class BonPrelevement extends CommonObject
 				$sql = "UPDATE ".MAIN_DB_PREFIX."prelevement_bons";
 				$sql .= " SET amount = ".price2num($this->total);
 				$sql .= " WHERE rowid = ".((int) $this->id);
-				$sql .= " AND entity = ".((int) $conf->entity);
+				$sql .= " AND entity = ".((int) $this->entity);
 
 				$resql = $this->db->query($sql);
 				if (!$resql) {

@@ -542,7 +542,7 @@ abstract class CommonObject
 			return -1;
 		}
 		if ($ref || $ref_ext) {
-			$sql .= " AND entity = ".((int) $conf->entity);
+			$sql .= " AND entity = ".((int) $conf->entity); //select -> getEntity ?
 		}
 
 		dol_syslog(get_class()."::isExistingObject", LOG_DEBUG);
@@ -1858,7 +1858,7 @@ abstract class CommonObject
 		if (!empty($element)) {
 			$sql .= " AND entity IN (".getEntity($element).")";
 		} else {
-			$sql .= " AND entity = ".((int) $conf->entity);
+			$sql .= " AND entity = ".((int) $conf->entity); //select -> getEntity ?
 		}
 
 		dol_syslog(get_class($this).'::fetchObjectFrom', LOG_DEBUG);
@@ -9311,7 +9311,7 @@ abstract class CommonObject
 			// Delete ecm_files extrafields
 			$sql = "DELETE FROM ".MAIN_DB_PREFIX."ecm_files_extrafields WHERE fk_object IN (";
 			$sql .= " SELECT rowid FROM ".MAIN_DB_PREFIX."ecm_files WHERE filename LIKE '".$this->db->escape($this->ref)."%'";
-			$sql .= " AND filepath = '".$this->db->escape($element)."/".$this->db->escape($this->ref)."' AND entity = ".((int) $conf->entity); // No need of getEntity here
+			$sql .= " AND filepath = '".$this->db->escape($element)."/".$this->db->escape($this->ref)."' AND entity = ".((int) $this->entity); // No need of getEntity here
 			$sql .= ")";
 
 			if (!$this->db->query($sql)) {
@@ -9323,7 +9323,7 @@ abstract class CommonObject
 			// Delete ecm_files
 			$sql = "DELETE FROM ".MAIN_DB_PREFIX."ecm_files";
 			$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%'";
-			$sql .= " AND filepath = '".$this->db->escape($element)."/".$this->db->escape($this->ref)."' AND entity = ".((int) $conf->entity); // No need of getEntity here
+			$sql .= " AND filepath = '".$this->db->escape($element)."/".$this->db->escape($this->ref)."' AND entity = ".((int) $this->entity); // No need of getEntity here
 
 			if (!$this->db->query($sql)) {
 				$this->error = $this->db->lasterror();

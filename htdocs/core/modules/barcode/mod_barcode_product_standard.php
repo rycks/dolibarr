@@ -153,7 +153,7 @@ class mod_barcode_product_standard extends ModeleNumRefBarCode
 		$sql = "SELECT rowid, code, libelle as label";
 		$sql .= " FROM ".MAIN_DB_PREFIX."c_barcode_type";
 		$sql .= " WHERE rowid = '".$db->escape($type)."'";
-		$sql .= " AND entity = ".((int) $conf->entity);
+		$sql .= " AND entity = ".((int) $conf->entity); //select -> getEntity ?
 		$result = $db->query($sql);
 		if ($result) {
 			$num = $db->num_rows($result);

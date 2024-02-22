@@ -586,7 +586,7 @@ class User extends CommonObject
 			// Load user->conf for user
 			$sql = "SELECT param, value FROM ".MAIN_DB_PREFIX."user_param";
 			$sql .= " WHERE fk_user = ".((int) $this->id);
-			$sql .= " AND entity = ".((int) $conf->entity);
+			$sql .= " AND entity = ".((int) $this->entity);
 			//dol_syslog(get_class($this).'::fetch load personalized conf', LOG_DEBUG);
 			$resql = $this->db->query($sql);
 			if ($resql) {
@@ -1585,7 +1585,7 @@ class User extends CommonObject
 		$num = 0;
 		$sql = "SELECT id FROM ".MAIN_DB_PREFIX."rights_def";
 		$sql .= " WHERE bydefault = 1";
-		$sql .= " AND entity = ".((int) $conf->entity);
+		$sql .= " AND entity = ".((int) $this->entity);
 
 		$resql = $this->db->query($sql);
 		if ($resql) {
