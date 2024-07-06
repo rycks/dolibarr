@@ -267,7 +267,7 @@ if (!is_array($x_coll) || !is_array($x_paye)) {
 				'datef'     =>$x_coll[$my_coll_rate]['datef'][$id],
 				'datep'     =>$x_coll[$my_coll_rate]['datep'][$id],
 
-				'company_link'=>$company_static->getNomUrl(1, '', 20),
+				'company_link'=>$company_static->getNomUrl(1, '', 40),
 
 				'ddate_start'=>$x_coll[$my_coll_rate]['ddate_start'][$id],
 				'ddate_end'  =>$x_coll[$my_coll_rate]['ddate_end'][$id],
@@ -346,7 +346,7 @@ if (!is_array($x_coll) || !is_array($x_paye)) {
 				'datef'     =>$x_paye[$my_paye_rate]['datef'][$id],
 				'datep'     =>$x_paye[$my_paye_rate]['datep'][$id],
 
-				'company_link'=>$company_static->getNomUrl(1, '', 20),
+				'company_link'=>$company_static->getNomUrl(1, '', 40),
 
 				'ddate_start'=>$x_paye[$my_paye_rate]['ddate_start'][$id],
 				'ddate_end'  =>$x_paye[$my_paye_rate]['ddate_end'][$id],
@@ -453,9 +453,14 @@ if (!is_array($x_coll) || !is_array($x_paye)) {
 			}
 		}
 
-		if ($invoice_type == 'customer' && $vat_rate_show == $rate) {
+		//erics deplie tous les details pour impression
+		if ($invoice_type == 'customer' && $vat_rate_show) {
 			if (is_array($x_both[$rate]['coll']['detail'])) {
 				foreach ($x_both[$rate]['coll']['detail'] as $index => $fields) {
+					//eric masque les lignes à zéro
+					if ($fields['totalht'] == 0) {
+						continue;
+					}
 					/*$company_static->id = $fields['company_id'];
 					$company_static->name = $fields['company_name'];
 					$company_static->name_alias = $fields['company_alias'];
@@ -686,7 +691,8 @@ if (!is_array($x_coll) || !is_array($x_paye)) {
 				$x_paye_sum += $temp_vat;
 			}
 
-			if ($invoice_type == 'supplier' && $vat_rate_show == $rate) {
+			//affiche le détail
+			if ($invoice_type == 'supplier' && $vat_rate_show) {
 				foreach ($x_both[$rate]['paye']['detail'] as $index => $fields) {
 					/*$company_static->id = $fields['company_id'];
 					$company_static->name = $fields['company_name'];
