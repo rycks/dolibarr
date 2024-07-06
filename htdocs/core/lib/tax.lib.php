@@ -974,15 +974,6 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 					$assocPrev = array();
 				}
 
-				//erics facture de situation - supprimer le montant de la ligne précédente
-				$situationInvoice = false;
-				if (!empty($assoc['fk_prev_id'])) {
-					$assocPrev = getDataForPrevInvoice($assoc['fk_prev_id'], $invoicetable,  $invoicedettable);
-					$situationInvoice = true;
-				} else {
-					$assocPrev = array();
-				}
-
 				if ($assoc['rowid'] != $oldrowid) {       // Si rupture sur d.rowid
 					$oldrowid = $assoc['rowid'];
 					//erics facture de situation - supprimer le montant de la ligne précédente
