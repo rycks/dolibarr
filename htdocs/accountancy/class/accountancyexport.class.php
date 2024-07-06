@@ -287,6 +287,28 @@ class AccountancyExport
 
 
 	/**
+	 * Return the MIME type of a file
+	 *
+	 * @param	int		$formatexportset	Id of export format
+	 * @return 	string						MIME type.
+	 */
+	public function getMimeType($formatexportset)
+	{
+		$mime = 'text/csv';
+
+		switch ($formatexportset) {
+			case self::$EXPORT_TYPE_FEC:
+				$mime = 'text/tab-separated-values';
+				break;
+			default:
+				$mime = 'text/csv';
+				break;
+		}
+
+		return $mime;
+	}
+
+	/**
 	 * Function who chose which export to use with the default config, and make the export into a file
 	 *
 	 * @param 	array	$TData 				Array with data
@@ -1001,7 +1023,9 @@ class AccountancyExport
 				print $line->code_journal . $separator;
 
 				// FEC:JournalLib
-				print dol_string_unaccent($langs->transnoentities($line->journal_label)) . $separator;
+				$labeljournal = dol_string_unaccent($langs->transnoentities($line->journal_label));
+				$labeljournal = dol_string_nospecial($labeljournal, ' ');
+				print $labeljournal . $separator;
 
 				// FEC:EcritureNum
 				print $line->piece_num . $separator;
@@ -1132,7 +1156,9 @@ class AccountancyExport
 				print $line->code_journal . $separator;
 
 				// FEC:JournalLib
-				print dol_string_unaccent($langs->transnoentities($line->journal_label)) . $separator;
+				$labeljournal = dol_string_unaccent($langs->transnoentities($line->journal_label));
+				$labeljournal = dol_string_nospecial($labeljournal, ' ');
+				print $labeljournal . $separator;
 
 				// FEC:EcritureNum
 				print $line->piece_num . $separator;
@@ -1371,7 +1397,7 @@ class AccountancyExport
 			}
 			print $nature_piece.$separator;
 			// RACI
-			//			if (! empty($line->subledger_account)) {
+			//			if (!empty($line->subledger_account)) {
 			//              if ($line->doc_type == 'supplier_invoice') {
 			//                  $racine_subledger_account = '40';
 			//              } elseif ($line->doc_type == 'customer_invoice') {
@@ -1634,7 +1660,7 @@ class AccountancyExport
 			}
 			print $nature_piece.$separator;
 			// RACI
-			//			if (! empty($line->subledger_account)) {
+			//			if (!empty($line->subledger_account)) {
 			//				if ($line->doc_type == 'supplier_invoice') {
 			//					$racine_subledger_account = '40';
 			//				} elseif ($line->doc_type == 'customer_invoice') {

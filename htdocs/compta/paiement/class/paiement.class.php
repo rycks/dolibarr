@@ -8,9 +8,10 @@
  * Copyright (C) 2015       Juanjo Menent		 <jmenent@2byte.es>
  * Copyright (C) 2018       Ferran Marcet		 <fmarcet@2byte.es>
  * Copyright (C) 2018       Thibault FOUCART		 <support@ptibogxiv.net>
- * Copyright (C) 2018       Frédéric France         <frederic.france@netlogic.fr>
+ * Copyright (C) 2018-2022  Frédéric France         <frederic.france@netlogic.fr>
  * Copyright (C) 2020       Andreu Bisquerra Gaya <jove@bisquerra.com>
  * Copyright (C) 2021       OpenDsi					<support@open-dsi.fr>
+ * Copyright (C) 2023       Joachim Kueter			<git-jk@bloxera.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -271,7 +272,7 @@ class Paiement extends CommonObject
 			// Add controls of input validity
 			if ($value_converted === false) {
 				// We failed to find the conversion for one invoice
-				$this->error = 'FailedToFoundTheConversionRateForInvoice';
+				$this->error = $langs->trans('FailedToFoundTheConversionRateForInvoice');
 				return -1;
 			}
 			if (empty($currencyofpayment)) {
@@ -313,7 +314,7 @@ class Paiement extends CommonObject
 		// Check parameters
 		if (empty($totalamount) && empty($atleastonepaymentnotnull)) {	 // We accept negative amounts for withdraw reject but not empty arrays
 			$this->errors[] = 'TotalAmountEmpty';
-			$this->error = 'TotalAmountEmpty';
+			$this->error = $langs->trans('TotalAmountEmpty');
 			return -1;
 		}
 
@@ -383,7 +384,19 @@ class Paiement extends CommonObject
 							if (!in_array($invoice->type, $affected_types)) {
 								dol_syslog("Invoice ".$facid." is not a standard, nor replacement invoice, nor credit note, nor deposit invoice, nor situation invoice. We do nothing more.");
 							} elseif ($remaintopay) {
-								dol_syslog("Remain to pay for invoice ".$facid." not null. We do nothing more.");
+								// hook to have an option to automatically close a closable invoice with less payment than the total amount (e.g. agreed cash discount terms)
+								global $hookmanager;
+								$hookmanager->initHooks(array('paymentdao'));
+								$parameters = array('facid' => $facid, 'invoice' => $invoice, 'remaintopay' => $remaintopay);
+								$action = 'CLOSEPAIDINVOICE';
+								$reshook = $hookmanager->executeHooks('createPayment', $parameters, $this, $action); // Note that $action and $object may have been modified by some hooks
+								if ($reshook < 0) {
+									$this->errors[] = $hookmanager->error;
+									$this->error = $hookmanager->error;
+									$error++;
+								} elseif ($reshook == 0) {
+									dol_syslog("Remain to pay for invoice " . $facid . " not null. We do nothing more.");
+								}
 								// } else if ($mustwait) dol_syslog("There is ".$mustwait." differed payment to process, we do nothing more.");
 							} else {
 								// If invoice is a down payment, we also convert down payment to discount
@@ -455,7 +468,7 @@ class Paiement extends CommonObject
 
 							$newlang = '';
 							$outputlangs = $langs;
-							if ($conf->global->MAIN_MULTILANGS && empty($newlang)) {
+							if (getDolGlobalInt('MAIN_MULTILANGS') && empty($newlang)) {
 								$invoice->fetch_thirdparty();
 								$newlang = $invoice->thirdparty->default_lang;
 							}
@@ -464,8 +477,8 @@ class Paiement extends CommonObject
 								$outputlangs->setDefaultLang($newlang);
 							}
 
-							$hidedetails = ! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0;
-							$hidedesc = ! empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0;
+							$hidedetails = !empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DETAILS) ? 1 : 0;
+							$hidedesc = !empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_DESC) ? 1 : 0;
 							$hideref = !empty($conf->global->MAIN_GENERATE_DOCUMENTS_HIDE_REF) ? 1 : 0;
 
 							$ret = $invoice->fetch($facid); // Reload to get new records
@@ -628,7 +641,7 @@ class Paiement extends CommonObject
 		$error = 0;
 		$bank_line_id = 0;
 
-		if (isModEnabled('banque')) {
+		if (isModEnabled("banque")) {
 			if ($accountid <= 0) {
 				$this->error = 'Bad value for parameter accountid='.$accountid;
 				dol_syslog(get_class($this).'::addPaymentToBank '.$this->error, LOG_ERR);

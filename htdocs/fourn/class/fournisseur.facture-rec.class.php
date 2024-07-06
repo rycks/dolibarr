@@ -195,7 +195,7 @@ class FactureFournisseurRec extends CommonInvoice
 
 		'fk_user_author' =>array('type'=>'integer:User:user/class/user.class.php', 'label'=>'Fk user author', 'enabled'=>1, 'visible'=>-1, 'position'=>80),
 		'fk_user_modif' =>array('type'=>'integer:User:user/class/user.class.php', 'label'=>'UserModif', 'enabled'=>1, 'visible'=>-2, 'notnull'=>-1, 'position'=>210),
-		'fk_projet' =>array('type'=>'integer:Project:projet/class/project.class.php:1:fk_statut=1', 'label'=>'Fk projet', 'enabled'=>'$conf->project->enabled', 'visible'=>-1, 'position'=>85),
+		'fk_projet' =>array('type'=>'integer:Project:projet/class/project.class.php:1:fk_statut=1', 'label'=>'Fk projet', 'enabled'=>"isModEnabled('project')", 'visible'=>-1, 'position'=>85),
 		'fk_account' =>array('type'=>'integer', 'label'=>'Fk account', 'enabled'=>'$conf->banque->enabled', 'visible'=>-1, 'position'=>175),
 		'fk_cond_reglement' =>array('type'=>'integer', 'label'=>'Fk cond reglement', 'enabled'=>1, 'visible'=>-1, 'position'=>90),
 		'fk_mode_reglement' =>array('type'=>'integer', 'label'=>'Fk mode reglement', 'enabled'=>1, 'visible'=>-1, 'position'=>95),
@@ -519,6 +519,8 @@ class FactureFournisseurRec extends CommonInvoice
 		$sql .= " nb_gen_max = ". (!empty($this->nb_gen_max) ? ((int) $this->nb_gen_max) : 0) . ',';
 		$sql .= " auto_validate = ". (!empty($this->auto_validate) ? ((int) $this->auto_validate) : 0);
 		$sql .= " WHERE rowid = ". (int) $this->id;
+
+		$this->db->begin();
 
 		dol_syslog(get_class($this)."::update", LOG_DEBUG);
 		$resql = $this->db->query($sql);
@@ -981,10 +983,10 @@ class FactureFournisseurRec extends CommonInvoice
 			$sql .= ', fk_user_author';
 			$sql .= ', fk_multicurrency, multicurrency_code, multicurrency_subprice, multicurrency_total_ht, multicurrency_total_tva, multicurrency_total_ttc';
 			$sql .= ') VALUES (';
-			$sql .= ' ' . (int) $facid;   // source supplier invoie id
-			$sql .= ', ' . (! empty($fk_product) ? "'" . $this->db->escape($fk_product) . "'" : 'null');
-			$sql .= ', ' . (! empty($ref) ? "'" . $this->db->escape($ref) . "'" : 'null');
-			$sql .= ', ' . (! empty($label) ? "'" . $this->db->escape($label) . "'" : 'null');
+			$sql .= ' ' . (int) $facid;   // source supplier invoice id
+			$sql .= ', ' . (!empty($fk_product) ? "'" . $this->db->escape($fk_product) . "'" : 'null');
+			$sql .= ', ' . (!empty($ref) ? "'" . $this->db->escape($ref) . "'" : 'null');
+			$sql .= ', ' . (!empty($label) ? "'" . $this->db->escape($label) . "'" : 'null');
 			$sql .= ", '" . $this->db->escape($desc) . "'";
 			$sql .= ', ' . price2num($pu_ht);
 			$sql .= ', ' . price2num($pu_ttc);
@@ -1009,7 +1011,7 @@ class FactureFournisseurRec extends CommonInvoice
 			$sql .= ', ' . (int) $special_code;
 			$sql .= ', ' . (int) $rang;
 			$sql .= ', ' . ($fk_unit ? (int) $fk_unit : 'NULL');
-			$sql .= ', ' . (int) $user;
+			$sql .= ', ' . (int) $user->id;
 			$sql .= ', ' . (int) $this->fk_multicurrency;
 			$sql .= ", '" . $this->db->escape($this->multicurrency_code) . "'";
 			$sql .= ', ' . price2num($pu_ht_devise, 'CU');
@@ -1323,7 +1325,7 @@ class FactureFournisseurRec extends CommonInvoice
 					}
 					if (!$error && ($facturerec->auto_validate || $forcevalidation)) {
 						$result = $new_fac_fourn->validate($user);
-						$laststep="Validate by user {$user->login}";
+						$laststep = "Validate by user {$user->login}";
 						if ($result <= 0) {
 							$this->errors = $new_fac_fourn->errors;
 							$this->error = $new_fac_fourn->error;
@@ -1333,9 +1335,9 @@ class FactureFournisseurRec extends CommonInvoice
 
 					if (!$error && $facturerec->generate_pdf) {
 						// We refresh the object in order to have all necessary data (like date_lim_reglement)
-						$laststep="Refresh {$new_fac_fourn->id}";
+						$laststep = "Refresh {$new_fac_fourn->id}";
 						$new_fac_fourn->fetch($new_fac_fourn->id);
-						$laststep="GenerateDocument {$new_fac_fourn->id}";
+						$laststep = "GenerateDocument {$new_fac_fourn->id}";
 						$result = $new_fac_fourn->generateDocument($facturerec->model_pdf, $langs);
 						if ($result < 0) {
 							$this->errors = $new_fac_fourn->errors;
@@ -1777,7 +1779,7 @@ class FactureFournisseurRec extends CommonInvoice
 		}
 
 		$sql = "UPDATE ".MAIN_DB_PREFIX.$this->table_element;
-		$sql .= " SET frequency = ".($frequency ? ((int) $this->db->escape($frequency)) : "NULL");
+		$sql .= " SET frequency = ".($frequency ? ((int) $frequency) : "NULL");
 		if (!empty($unit)) {
 			$sql .= ", unit_frequency = '".$this->db->escape($unit)."'";
 		}
@@ -2160,8 +2162,8 @@ class FactureFournisseurLigneRec extends CommonObjectLine
 		$sql .= ' fk_facture_fourn = ' . (int) $this->fk_facture_fourn;
 		$sql .= ', fk_parent_line = ' . (int) $this->fk_parent;
 		$sql .= ', fk_product = ' . (int) $this->fk_product;
-		$sql .= ', ref = ' . (! empty($this->ref) ? "'" . $this->db->escape($this->ref) . "'" : 'NULL');
-		$sql .= ", label = " . (! empty($this->label) ? "'" . $this->db->escape($this->label) . "'" : 'NULL');
+		$sql .= ', ref = ' . (!empty($this->ref) ? "'" . $this->db->escape($this->ref) . "'" : 'NULL');
+		$sql .= ", label = " . (!empty($this->label) ? "'" . $this->db->escape($this->label) . "'" : 'NULL');
 		$sql .= ", description = '" . $this->db->escape($this->description) . "'";
 		$sql .= ', pu_ht = ' . price2num($this->pu_ht);
 		$sql .= ', pu_ttc = ' . price2num($this->pu_ttc);
@@ -2188,7 +2190,7 @@ class FactureFournisseurLigneRec extends CommonObjectLine
 		$sql .= ', special_code =' . (int) $this->special_code;
 		$sql .= ', rang = ' . (int) $this->rang;
 		$sql .= ', fk_unit = ' .($this->fk_unit ? "'".$this->db->escape($this->fk_unit)."'" : 'null');
-		$sql .= ', fk_user_modif = ' . (int) $user;
+		$sql .= ', fk_user_modif = ' . (int) $user->id;
 		$sql .= ' WHERE rowid = ' . (int) $this->id;
 
 		$this->db->begin();
