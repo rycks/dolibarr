@@ -316,9 +316,9 @@ insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values ( 2
 
 -- SWITZERLAND (id country=6)
 insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (  61,   6,   '0','0','VAT rate 0',  1);
-insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (  62,   6, '3.7','0','VAT rate - reduced',1);
-insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (  63,   6, '2.5','0','VAT rate - super-reduced',1);
-insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (  64,   6, '7.7','0','VAT rate - standard',1);
+insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (  62,   6, '3.8','0','VAT rate - reduced',1);
+insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (  63,   6, '2.6','0','VAT rate - super-reduced',1);
+insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (  64,   6, '8.1','0','VAT rate - standard',1);
 
 -- SRI LANKA (id country=207)
 insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (2071, 207,   '0','0','VAT 0', 1);
@@ -403,3 +403,9 @@ insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (23
 insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (2335,61,     '0','0','No VAT',1);
 insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (2336,61,    '10','0','VAT 10%',1);
 insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (2337,61,    '18','0','VAT 18%',1);
+
+-- Turkiye (Turkey) (id country=221)
+insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (22101,221,     '0','0','No VAT',1);
+insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (22102,221,    '1','0','VAT 1%',1);
+insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (22103,221,    '8','0','VAT 8%',1);
+insert into llx_c_tva(rowid,fk_pays,taux,recuperableonly,note,active) values (22104,221,    '18','0','VAT 18%',1);

@@ -99,8 +99,10 @@ class SMTPs
 
 	/**
 	 * Message Content
+	 *
+	 * @var	array	$_msgContent	Array of messages
 	 */
-	private $_msgContent = null;
+	private $_msgContent = array();
 
 	/**
 	 * Custom X-Headers
@@ -229,6 +231,22 @@ class SMTPs
 	// @CHANGE LDR
 	public $log = '';
 	public $lastretval = '';
+
+	/**
+	 * @var resource
+	 */
+	public $socket;
+
+	/**
+	 * @var int
+	 */
+	public $errno;
+
+	/**
+	 * @var string
+	 */
+	public $errstr;
+
 	private $_errorsTo = '';
 	private $_deliveryReceipt = 0;
 	private $_trackId = '';
@@ -456,6 +474,7 @@ class SMTPs
 		// phpcs:enable
 		global $conf;
 
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/geturl.lib.php';
 		// Send the RFC2554 specified EHLO.
 		// This improvment as provided by 'SirSir' to
 		// accomodate both SMTP AND ESMTP capable servers
@@ -476,13 +495,17 @@ class SMTPs
 			if (!is_numeric($conf->global->MAIL_SMTP_USE_FROM_FOR_HELO)) {
 				// If value of MAIL_SMTP_USE_FROM_FOR_HELO is a string, we use it as domain name
 				$hosth = $conf->global->MAIL_SMTP_USE_FROM_FOR_HELO;
-			} else {
+			} elseif ($conf->global->MAIL_SMTP_USE_FROM_FOR_HELO == 1) {
 				// If value of MAIL_SMTP_USE_FROM_FOR_HELO is 1, we use the domain in the from.
 				// So if the from to is 'aaa <bbb@ccc.com>', we will keep 'ccc.com'
 				$hosth = $this->getFrom('addr');
 				$hosth = preg_replace('/^.*</', '', $hosth);
 				$hosth = preg_replace('/>.*$/', '', $hosth);
 				$hosth = preg_replace('/.*@/', '', $hosth);
+			} elseif ($conf->global->MAIL_SMTP_USE_FROM_FOR_HELO == 2) {
+				// If value of MAIL_SMTP_USE_FROM_FOR_HELO is 2, we use the domain in the $dolibarr_main_url_root.
+				global $dolibarr_main_url_root;
+				$hosth = getDomainFromURL($dolibarr_main_url_root, 1);
 			}
 		}
 
@@ -630,9 +653,9 @@ class SMTPs
 	{
 		global $conf;
 
-		/**
-		 * Default return value
-		 */
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/geturl.lib.php';
+
+		// Default return value
 		$_retVal = false;
 
 		// Connect to Server
@@ -661,13 +684,17 @@ class SMTPs
 					if (!is_numeric($conf->global->MAIL_SMTP_USE_FROM_FOR_HELO)) {
 						// If value of MAIL_SMTP_USE_FROM_FOR_HELO is a string, we use it as domain name
 						$hosth = $conf->global->MAIL_SMTP_USE_FROM_FOR_HELO;
-					} else {
+					} elseif ($conf->global->MAIL_SMTP_USE_FROM_FOR_HELO == 1) {
 						// If value of MAIL_SMTP_USE_FROM_FOR_HELO is 1, we use the domain in the from.
-						// If the from to is 'aaa <bbb@ccc.com>', we will keep 'ccc.com'
+						// So if the from to is 'aaa <bbb@ccc.com>', we will keep 'ccc.com'
 						$hosth = $this->getFrom('addr');
 						$hosth = preg_replace('/^.*</', '', $hosth);
 						$hosth = preg_replace('/>.*$/', '', $hosth);
 						$hosth = preg_replace('/.*@/', '', $hosth);
+					} elseif ($conf->global->MAIL_SMTP_USE_FROM_FOR_HELO == 2) {
+						// If value of MAIL_SMTP_USE_FROM_FOR_HELO is 2, we use the domain in the $dolibarr_main_url_root.
+						global $dolibarr_main_url_root;
+						$hosth = getDomainFromURL($dolibarr_main_url_root, 1);
 					}
 				}
 
@@ -1113,10 +1140,8 @@ class SMTPs
 
 	/**
 	 * Inserts given addresses into structured format.
-	 * This method takes a list of given addresses, via an array
-	 * or a COMMA delimted string, and inserts them into a highly
-	 * structured array. This array is designed to remove duplicate
-	 * addresses and to sort them by Domain.
+	 * This method takes a list of given addresses, via an array or a COMMA delimted string, and inserts them into a highly
+	 * structured array. This array is designed to remove duplicate addresses and to sort them by Domain.
 	 *
 	 * @param 	string 	$_type 			TO, CC, or BCC lists to add addrresses into
 	 * @param 	mixed 	$_addrList 		Array or COMMA delimited string of addresses
@@ -1218,7 +1243,9 @@ class SMTPs
 		}
 
 		// Pull User Name and Host.tld apart
-		list($_aryEmail['user'], $_aryEmail['host']) = explode('@', $_aryEmail['addr']);
+		$_tmpHost = explode('@', $_aryEmail['addr']);
+		$_aryEmail['user'] = $_tmpHost[0];
+		$_aryEmail['host'] = $_tmpHost[1];
 
 		// Put the brackets back around the address
 		$_aryEmail['addr'] = '<'.$_aryEmail['addr'].'>';
@@ -1422,10 +1449,10 @@ class SMTPs
 
 		$trackid = $this->getTrackId();
 		if ($trackid) {
-			// References is kept in response and Message-ID is returned into In-Reply-To:
 			$_header .= 'Message-ID: <'.time().'.SMTPs-dolibarr-'.$trackid.'@'.$host.">\r\n";
-			$_header .= 'References: <'.time().'.SMTPs-dolibarr-'.$trackid.'@'.$host.">\r\n";
 			$_header .= 'X-Dolibarr-TRACKID: '.$trackid.'@'.$host."\r\n";
+			// References and In-Reply-To: will be set by caller
+			//$_header .= 'References: <'.time().'.SMTPs-dolibarr-'.$trackid.'@'.$host.">\r\n";
 		} else {
 			$_header .= 'Message-ID: <'.time().'.SMTPs@'.$host.">\r\n";
 		}
@@ -1435,10 +1462,6 @@ class SMTPs
 		if ($this->getMoreInHeader()) {
 			$_header .= $this->getMoreInHeader(); // Value must include the "\r\n";
 		}
-
-		//$_header .=
-		//                 'Read-Receipt-To: '   . $this->getFrom( 'org' ) . "\r\n"
-		//                 'Return-Receipt-To: ' . $this->getFrom( 'org' ) . "\r\n";
 
 		if ($this->getSensitivity()) {
 			$_header .= 'Sensitivity: '.$this->getSensitivity()."\r\n";
@@ -1464,6 +1487,7 @@ class SMTPs
 		$_header .= 'X-Dolibarr-Option: '.($conf->global->MAIN_MAIL_USE_MULTI_PART ? 'MAIN_MAIL_USE_MULTI_PART' : 'No MAIN_MAIL_USE_MULTI_PART')."\r\n";
 		$_header .= 'Mime-Version: 1.0'."\r\n";
 
+		// TODO Add also $this->references and In-Reply-To
 
 		return $_header;
 	}
@@ -1833,7 +1857,7 @@ class SMTPs
 	/**
 	 * Retrieves the Message X-Header Content
 	 *
-	 * @return string[] $_msgContent Message X-Header Content
+	 * @return array	$_msgContent 	Message X-Header Content
 	 */
 	public function getXheader()
 	{
@@ -1867,6 +1891,7 @@ class SMTPs
 		} elseif ($type == 'alternative') {
 			return $this->_smtpsAlternativeBoundary;
 		}
+		return '';
 	}
 
 	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps

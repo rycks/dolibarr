@@ -28,6 +28,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 require_once DOL_DOCUMENT_ROOT.'/contrat/class/contrat.class.php';
 require_once DOL_DOCUMENT_ROOT.'/fichinter/class/fichinter.class.php';
+require_once DOL_DOCUMENT_ROOT.'/contact/class/contact.class.php';
 
 
 /**
@@ -111,7 +112,7 @@ class ActionsTicket
 	 * @param	int		$id				ID of ticket
 	 * @param	string	$ref			Reference of ticket
 	 * @param	string	$track_id		Track ID of ticket (for public area)
-	 * @return 	void
+	 * @return int              		<0 if KO, >0 if OK
 	 */
 	public function fetch($id = 0, $ref = '', $track_id = '')
 	{
@@ -211,7 +212,7 @@ class ActionsTicket
 			$msg = GETPOSTISSET('message_initial') ? GETPOST('message_initial', 'restricthtml') : $object->message;
 			include_once DOL_DOCUMENT_ROOT.'/core/class/doleditor.class.php';
 			$uselocalbrowser = true;
-			$ckeditorenabledforticket = $conf->global->FCKEDITOR_ENABLE_TICKET;
+			$ckeditorenabledforticket = getDolGlobalString('FCKEDITOR_ENABLE_TICKET');
 			$doleditor = new DolEditor('message_initial', $msg, '100%', 250, 'dolibarr_details', 'In', true, $uselocalbrowser, $ckeditorenabledforticket, ROWS_9, '95%');
 			$doleditor->Create();
 		} else {
@@ -305,6 +306,14 @@ class ActionsTicket
 							$res = $userstat->fetch($arraymsgs['fk_user_author']);
 							if ($res) {
 								print $userstat->getNomUrl(0);
+							}
+						} elseif (isset($arraymsgs['fk_contact_author'])) {
+							$contactstat = new Contact($this->db);
+							$res = $contactstat->fetch(0, null, '', $arraymsgs['fk_contact_author']);
+							if ($res) {
+								print $contactstat->getNomUrl(0, 'nolink');
+							} else {
+								print $arraymsgs['fk_contact_author'];
 							}
 						} else {
 							print $langs->trans('Customer');
@@ -409,9 +418,9 @@ class ActionsTicket
 				print '<div class="inline-block center marginbottomonly">';
 
 				if ($status == 1) {
-					$urlforbutton = $_SERVER['PHP_SELF'].'?track_id='.$object->track_id.'&action=mark_ticket_read'; // To set as read, we use a dedicated action
+					$urlforbutton = $_SERVER['PHP_SELF'].'?track_id='.$object->track_id.'&action=set_read&token='.newToken(); // To set as read, we use a dedicated action
 				} else {
-					$urlforbutton = $_SERVER['PHP_SELF'].'?track_id='.$object->track_id.'&action=confirm_set_status&token='.newToken().'&new_status='.$status;
+					$urlforbutton = $_SERVER['PHP_SELF'].'?track_id='.$object->track_id.'&action=confirm_set_status&token='.newToken().'&new_status='.((int) $status);
 				}
 
 				print '<a class="butAction butStatus marginbottomonly" href="'.$urlforbutton.'">';

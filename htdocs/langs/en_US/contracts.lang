@@ -2,7 +2,7 @@
 ContractsArea=Contracts area
 ListOfContracts=List of contracts
 AllContracts=All contracts
-ContractCard=Contract card
+ContractCard=Contract
 ContractStatusNotRunning=Not running
 ContractStatusDraft=Draft
 ContractStatusValidated=Validated
@@ -47,6 +47,7 @@ DateContract=Contract date
 DateServiceActivate=Service activation date
 ListOfServices=List of services
 ListOfInactiveServices=List of not active services
+ListOfNotExpiredServices=List of unexpired active services
 ListOfExpiredServices=List of expired active services
 ListOfClosedServices=List of closed services
 ListOfRunningServices=List of running services

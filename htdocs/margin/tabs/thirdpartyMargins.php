@@ -93,6 +93,9 @@ if (!empty($conf->global->MAIN_HTML_TITLE) && preg_match('/thirdpartynameonly/',
 $help_url = 'EN:Module_Third_Parties|FR:Module_Tiers|ES:Empresas';
 llxHeader('', $title, $help_url);
 
+$totalMargin = 0;
+$marginRate = '';
+$markRate = '';
 if ($socid > 0) {
 	$object = new Societe($db);
 	$object->fetch($socid);
@@ -163,7 +166,7 @@ if ($socid > 0) {
 	print "</table>";
 
 	print '</div>';
-	print '<div style="clear:both"></div>';
+	print '<div class="clearboth"></div>';
 
 	print dol_get_fiche_end();
 

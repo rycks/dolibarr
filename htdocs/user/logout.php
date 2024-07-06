@@ -45,13 +45,15 @@ if (!defined('EVEN_IF_ONLY_LOGIN_ALLOWED')) {
 
 require_once '../main.inc.php';
 
-// This can happen only with a bookmark or forged url call.
+// This can happen only with a bookmark or a forged url call.
 if (!empty($_SESSION["dol_authmode"]) && ($_SESSION["dol_authmode"] == 'forceuser' || $_SESSION["dol_authmode"] == 'http')) {
 	unset($_SESSION["dol_login"]);
-	die("Applicative disconnection should be useless when connection was made in mode ".$_SESSION["dol_authmode"]);
+	unset($_SESSION['dol_entity']);
+	unset($_SESSION['urlfrom']);
+	die("Applicative disconnection should be useless when connection was made in mode ".$_SESSION["dol_authmode"]);	// TODO Really ? It at least delete the session file ?!
 }
 
-global $conf, $langs, $user;
+//global $conf, $langs, $user;
 
 // Call trigger
 $result = $user->call_trigger('USER_LOGOUT', $user);
@@ -70,7 +72,7 @@ if ($reshook < 0) {
 }
 
 // Define url to go after disconnect
-$urlfrom = empty($_SESSION["urlfrom"]) ? '' : $_SESSION["urlfrom"];
+$urlfrom = empty($_SESSION["urlfrom"]) ? GETPOST('urlfrom') : $_SESSION["urlfrom"];
 
 // Define url to go
 $url = DOL_URL_ROOT."/index.php"; // By default go to login page

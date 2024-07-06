@@ -92,7 +92,7 @@ if (!isModEnabled('ticket')) {
  */
 
 if ($cancel) {
-	$backtopage = DOL_URL_ROOT.'/public/ticket/index.php';
+	$backtopage = getDolGlobalString('TICKET_URL_PUBLIC_INTERFACE', DOL_URL_ROOT.'/public/ticket/');
 
 	header("Location: ".$backtopage);
 	exit;
@@ -181,21 +181,20 @@ $user_assign = new User($db);
 $user_create = new User($db);
 $formTicket = new FormTicket($db);
 
-if (!$conf->global->TICKET_ENABLE_PUBLIC_INTERFACE) {
+if (!getDolGlobalString('TICKET_ENABLE_PUBLIC_INTERFACE')) {
 	print '<div class="error">'.$langs->trans('TicketPublicInterfaceForbidden').'</div>';
 	$db->close();
 	exit();
 }
 
 $arrayofjs = array();
-$arrayofcss = array('/ticket/css/styles.css.php');
+$arrayofcss = array(getDolGlobalString('TICKET_URL_PUBLIC_INTERFACE', '/ticket/').'css/styles.css.php');
 
 llxHeaderTicket($langs->trans("Tickets"), "", 0, 0, $arrayofjs, $arrayofcss);
 
 
-
 if ($action == "view_ticketlist") {
-	print '<div class="ticketpublicarealist">';
+	print '<div class="ticketpublicarealist ticketlargemargin centpercent">';
 
 	print '<br>';
 	if ($display_ticket_list) {
@@ -259,6 +258,9 @@ if ($action == "view_ticketlist") {
 			//'t.tms' => array('label' => $langs->trans("DateModificationShort"), 'checked' => 0, 'position' => 2)
 			//'t.statut'=>array('label'=>$langs->trans("Status"), 'checked'=>1, 'position'=>1000),
 		);
+
+		if (!getDolGlobalString('TICKET_SHOW_PROGRESSION'))
+			unset($arrayfields['t.progress']);
 
 		// Extra fields
 		if (isset($extrafields->attributes[$object->table_element]['label']) && is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label'])) {
@@ -345,7 +347,8 @@ if ($action == "view_ticketlist") {
 		$sql .= " t.message,";
 		$sql .= " t.fk_statut,";
 		$sql .= " t.resolution,";
-		$sql .= " t.progress,";
+		if (getDolGlobalString('TICKET_SHOW_PROGRESSION'))
+			$sql .= " t.progress,";
 		$sql .= " t.timing,";
 		$sql .= " t.type_code,";
 		$sql .= " t.category_code,";
@@ -431,6 +434,7 @@ if ($action == "view_ticketlist") {
 				$reshook=$hookmanager->executeHooks('printFieldListHeader', $parameters, $object, $action);    // Note that $action and $object may have been modified by hook
 				print $hookmanager->resPrint;
 
+				print '<div class="div-table-responsive">';
 				print '<table class="liste '.($moreforfilter ? "listwithfilterbefore" : "").'">';
 
 				// Filter bar
@@ -475,7 +479,7 @@ if ($action == "view_ticketlist") {
 					print '</td>';
 				}
 
-				if (!empty($arrayfields['t.progress']['checked'])) {
+				if (getDolGlobalString('TICKET_SHOW_PROGRESSION') && !empty($arrayfields['t.progress']['checked'])) {
 					print '<td class="liste_titre"></td>';
 				}
 
@@ -499,7 +503,7 @@ if ($action == "view_ticketlist") {
 				$reshook = $hookmanager->executeHooks('printFieldListOption', $parameters, $object); // Note that $action and $object may have been modified by hook
 				print $hookmanager->resPrint;
 
-				// Status
+				// Status ticket
 				if (!empty($arrayfields['t.fk_statut']['checked'])) {
 					print '<td class="liste_titre">';
 					$selected = ($search_fk_status != "non_closed" ? $search_fk_status : '');
@@ -540,7 +544,7 @@ if ($action == "view_ticketlist") {
 				if (!empty($arrayfields['severity.code']['checked'])) {
 					print_liste_field_titre($arrayfields['severity.code']['label'], $url_page_current, 'severity.code', '', $param, '', $sortfield, $sortorder);
 				}
-				if (!empty($arrayfields['t.progress']['checked'])) {
+				if (getDolGlobalString('TICKET_SHOW_PROGRESSION') && !empty($arrayfields['t.progress']['checked'])) {
 					print_liste_field_titre($arrayfields['t.progress']['label'], $url_page_current, 't.progress', '', $param, '', $sortfield, $sortorder);
 				}
 				if (!empty($arrayfields['t.fk_user_create']['checked'])) {
@@ -632,7 +636,7 @@ if ($action == "view_ticketlist") {
 					}
 
 					// Progression
-					if (!empty($arrayfields['t.progress']['checked'])) {
+					if (getDolGlobalString('TICKET_SHOW_PROGRESSION') && !empty($arrayfields['t.progress']['checked'])) {
 						print '<td>';
 						print $obj->progress;
 						print '</td>';
@@ -702,9 +706,13 @@ if ($action == "view_ticketlist") {
 				}
 
 				print '</table>';
+				print '</div>';
+
 				print '</form>';
 
-				print '<form method="post" id="form_view_ticket" name="form_view_ticket" action="'.dol_buildpath('/public/ticket/view.php', 1).(!empty($entity) && isModEnabled('multicompany')?'?entity='.$entity:'').'" style="display:none;">';
+				$url_public_ticket = getDolGlobalString('TICKET_URL_PUBLIC_INTERFACE', dol_buildpath('/public/ticket/', 1));
+
+				print '<form method="post" id="form_view_ticket" name="form_view_ticket" action="'.$url_public_ticket.'view.php'.(!empty($entity) && isModEnabled('multicompany')?'?entity='.$entity:'').'" style="display:none;">';
 				print '<input type="hidden" name="token" value="'.newToken().'">';
 				print '<input type="hidden" name="action" value="view_ticket">';
 				print '<input type="hidden" name="btn_view_ticket_list" value="1">';
@@ -729,7 +737,7 @@ if ($action == "view_ticketlist") {
 
 	print '</div>';
 } else {
-	print '<div class="ticketpublicarea">';
+	print '<div class="ticketpublicarea ticketlargemargin centpercent">';
 
 	print '<p class="center opacitymedium">'.$langs->trans("TicketPublicMsgViewLogIn").'</p>';
 	print '<br>';
@@ -761,7 +769,7 @@ if ($action == "view_ticketlist") {
 }
 
 // End of page
-htmlPrintOnlinePaymentFooter($mysoc, $langs, 0, $suffix, $object);
+htmlPrintOnlineFooter($mysoc, $langs, 0, $suffix, $object);
 
 llxFooter('', 'public');
 
