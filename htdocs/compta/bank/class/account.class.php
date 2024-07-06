@@ -146,6 +146,18 @@ class Account extends CommonObject
 	public $iban_prefix;
 
 	/**
+	 * Address of the bank
+	 * @var string
+	 */
+	public $domiciliation;
+
+	/**
+	 * XML SEPA format: place Payment Type Information (PmtTpInf) in Credit Transfer Transaction Information (CdtTrfTxInf)
+	 * @var int
+	 */
+	public $pti_in_ctti = 0;
+
+	/**
 	 * Name of account holder
 	 * @var string
 	 */
@@ -620,7 +632,7 @@ class Account extends CommonObject
 					$this->error = $this->db->lasterror();
 					$this->db->rollback();
 
-					return -3;
+					return -4;
 				}
 			}
 
@@ -632,7 +644,7 @@ class Account extends CommonObject
 			$this->errors = $accline->errors;
 			$this->db->rollback();
 
-			return -2;
+			return -5;
 		}
 	}
 
@@ -704,6 +716,7 @@ class Account extends CommonObject
 		$sql .= ", bic";
 		$sql .= ", iban_prefix";
 		$sql .= ", domiciliation";
+		$sql .= ", pti_in_ctti";
 		$sql .= ", proprio";
 		$sql .= ", owner_address";
 		$sql .= ", currency_code";
@@ -730,6 +743,7 @@ class Account extends CommonObject
 		$sql .= ", '".$this->db->escape($this->bic)."'";
 		$sql .= ", '".$this->db->escape($this->iban)."'";
 		$sql .= ", '".$this->db->escape($this->domiciliation)."'";
+		$sql .= ", ".((int) $this->pti_in_ctti);
 		$sql .= ", '".$this->db->escape($this->proprio)."'";
 		$sql .= ", '".$this->db->escape($this->owner_address)."'";
 		$sql .= ", '".$this->db->escape($this->currency_code)."'";
@@ -852,6 +866,7 @@ class Account extends CommonObject
 		$sql .= ",bic='".$this->db->escape($this->bic)."'";
 		$sql .= ",iban_prefix = '".$this->db->escape($this->iban)."'";
 		$sql .= ",domiciliation='".$this->db->escape($this->domiciliation)."'";
+		$sql .= ",pti_in_ctti=".((int) $this->pti_in_ctti);
 		$sql .= ",proprio = '".$this->db->escape($this->proprio)."'";
 		$sql .= ",owner_address = '".$this->db->escape($this->owner_address)."'";
 
@@ -881,7 +896,7 @@ class Account extends CommonObject
 
 			if (!$error && !$notrigger) {
 				// Call trigger
-				$result = $this->call_trigger('BANKACCOUNT_UPDATE', $user);
+				$result = $this->call_trigger('BANKACCOUNT_MODIFY', $user);
 				if ($result < 0) {
 					$error++;
 				}
@@ -973,7 +988,7 @@ class Account extends CommonObject
 
 		$sql = "SELECT ba.rowid, ba.ref, ba.label, ba.bank, ba.number, ba.courant, ba.clos, ba.rappro, ba.url,";
 		$sql .= " ba.code_banque, ba.code_guichet, ba.cle_rib, ba.bic, ba.iban_prefix as iban,";
-		$sql .= " ba.domiciliation, ba.proprio, ba.owner_address, ba.state_id, ba.fk_pays as country_id,";
+		$sql .= " ba.domiciliation, ba.pti_in_ctti, ba.proprio, ba.owner_address, ba.state_id, ba.fk_pays as country_id,";
 		$sql .= " ba.account_number, ba.fk_accountancy_journal, ba.currency_code,";
 		$sql .= " ba.min_allowed, ba.min_desired, ba.comment,";
 		$sql .= " ba.datec as date_creation, ba.tms as date_update, ba.ics, ba.ics_transfer,";
@@ -1016,6 +1031,7 @@ class Account extends CommonObject
 				$this->bic           = $obj->bic;
 				$this->iban          = $obj->iban;
 				$this->domiciliation = $obj->domiciliation;
+				$this->pti_in_ctti   = $obj->pti_in_ctti;
 				$this->proprio       = $obj->proprio;
 				$this->owner_address = $obj->owner_address;
 
@@ -1087,6 +1103,8 @@ class Account extends CommonObject
 		$error = 0;
 
 		$this->db->begin();
+
+		// @TODO Check there is no child into llx_payment_various, ... to allow deletion ?
 
 		// Delete link between tag and bank account
 		if (!$error) {
@@ -1212,9 +1230,11 @@ class Account extends CommonObject
 	 * 	Return current sold
 	 *
 	 * 	@param	int		$option		1=Exclude future operation date (this is to exclude input made in advance and have real account sold)
-	 *	@return	int					Current sold (value date <= today)
+	 *	@param	int		$date_end	Date until we want to get bank account sold
+	 *	@param	string	$field		dateo or datev
+	 *	@return	int		current sold (value date <= today)
 	 */
-	public function solde($option = 0)
+	public function solde($option = 0, $date_end = '', $field = 'dateo')
 	{
 		$solde = 0;
 
@@ -1222,7 +1242,7 @@ class Account extends CommonObject
 		$sql .= " FROM ".MAIN_DB_PREFIX."bank";
 		$sql .= " WHERE fk_account = ".((int) $this->id);
 		if ($option == 1) {
-			$sql .= " AND dateo <= '".$this->db->idate(dol_now())."'";
+			$sql .= " AND ".$this->db->escape($field)." <= '".(!empty($date_end) ? $this->db->idate($date_end) : $this->db->idate(dol_now()))."'";
 		}
 
 		$resql = $this->db->query($sql);
@@ -1401,7 +1421,7 @@ class Account extends CommonObject
 			$option = 'nolink';
 		}
 
-		if (!empty($conf->accounting->enabled)) {
+		if (isModEnabled('accounting')) {
 			include_once DOL_DOCUMENT_ROOT.'/core/lib/accounting.lib.php';
 			$langs->load("accountancy");
 			$label .= '<br><b>'.$langs->trans('AccountAccounting').':</b> '.length_accountg($this->account_number);
@@ -1539,10 +1559,10 @@ class Account extends CommonObject
 	{
 		$country_code = $this->getCountryCode();
 
-		if (in_array($country_code, array('AD', 'FR', 'ES', 'GA', 'IT', 'NC'))) {
+		if (in_array($country_code, array('FR', 'ES', 'GA', 'IT', 'NC'))) {
 			return 1; // France, Spain, Gabon, ... - Not valid for CH
 		}
-		if (in_array($country_code, array('AU', 'BE', 'CA', 'DE', 'DK', 'GR', 'GB', 'ID', 'IE', 'IR', 'KR', 'NL', 'NZ', 'UK', 'US'))) {
+		if (in_array($country_code, array('AD', 'AU', 'BE', 'CA', 'DE', 'DK', 'GR', 'GB', 'ID', 'IE', 'IR', 'KR', 'NL', 'NZ', 'UK', 'US'))) {
 			return 2; // Australia, England...
 		}
 		return 0;
@@ -1711,19 +1731,20 @@ class Account extends CommonObject
 	 */
 	public function initAsSpecimen()
 	{
+		// Example of IBAN FR7630001007941234567890185
 		$this->specimen        = 1;
 		$this->ref             = 'MBA';
 		$this->label           = 'My Big Company Bank account';
 		$this->bank            = 'MyBank';
 		$this->courant         = Account::TYPE_CURRENT;
 		$this->clos            = Account::STATUS_OPEN;
-		$this->code_banque     = '123';
-		$this->code_guichet    = '456';
-		$this->number          = 'ABC12345';
-		$this->cle_rib         = '50';
+		$this->code_banque     = '30001';
+		$this->code_guichet    = '00794';
+		$this->number          = '12345678901';
+		$this->cle_rib         = '85';
 		$this->bic             = 'AA12';
-		$this->iban            = 'FR999999999';
-		$this->domiciliation   = 'My bank address';
+		$this->iban            = 'FR7630001007941234567890185';
+		$this->domiciliation   = 'Banque de France';
 		$this->proprio         = 'Owner';
 		$this->owner_address   = 'Owner address';
 		$this->country_id      = 1;
@@ -1744,7 +1765,7 @@ class Account extends CommonObject
 		if ($dbs->query($sql)) {
 			return true;
 		} else {
-			//if ($ignoreerrors) return true; // TODO Not enough. If there is A-B on kept thirdarty and B-C on old one, we must get A-B-C after merge. Not A-B.
+			//if ($ignoreerrors) return true; // TODO Not enough. If there is A-B on kept thirdparty and B-C on old one, we must get A-B-C after merge. Not A-B.
 			//$this->errors = $dbs->lasterror();
 			return false;
 		}
@@ -1906,7 +1927,6 @@ class AccountLine extends CommonObject
 		$sql .= " b.fk_user_author, b.fk_user_rappro,";
 		$sql .= " b.fk_type, b.num_releve, b.num_chq, b.rappro, b.note,";
 		$sql .= " b.fk_bordereau, b.banque, b.emetteur,";
-		//$sql.= " b.author"; // Is this used ?
 		$sql .= " ba.ref as bank_account_ref, ba.label as bank_account_label";
 		$sql .= " FROM ".MAIN_DB_PREFIX."bank as b,";
 		$sql .= " ".MAIN_DB_PREFIX."bank_account as ba";
@@ -2393,7 +2413,7 @@ class AccountLine extends CommonObject
 
 		$result = '';
 
-		$label = img_picto('', $this->picto).' <u>'.$langs->trans("Transaction").'</u>:<br>';
+		$label = img_picto('', $this->picto).' <u>'.$langs->trans("BankTransactionLine").'</u>:<br>';
 		$label .= '<b>'.$langs->trans("Ref").':</b> '.$this->ref;
 
 		$linkstart = '<a href="'.DOL_URL_ROOT.'/compta/bank/line.php?rowid='.((int) $this->id).'&save_lastsearch_values=1" title="'.dol_escape_htmltag($label, 1).'" class="classfortooltip">';

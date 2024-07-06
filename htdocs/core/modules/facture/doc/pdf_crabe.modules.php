@@ -164,7 +164,6 @@ class pdf_crabe extends ModelePDFFactures
 		$this->option_tva = 1; // Manage the vat option FACTURE_TVAOPTION
 		$this->option_modereg = 1; // Display payment mode
 		$this->option_condreg = 1; // Display payment terms
-		$this->option_codeproduitservice = 1; // Display product-service code
 		$this->option_multilang = 1; // Available in several languages
 		$this->option_escompte = 1; // Displays if there has been a discount
 		$this->option_credit_note = 1; // Support credit notes
@@ -305,11 +304,11 @@ class pdf_crabe extends ModelePDFFactures
 
 			// Definition of $dir and $file
 			if ($object->specimen) {
-				$dir = empty($conf->facture->multidir_output[$conf->entity]) ? $conf->facture->dir_output : $conf->facture->multidir_output[$conf->entity];
+				$dir = empty($conf->facture->multidir_output[$object->entity]) ? $conf->facture->dir_output : $conf->facture->multidir_output[$object->entity];
 				$file = $dir."/SPECIMEN.pdf";
 			} else {
 				$objectref = dol_sanitizeFileName($object->ref);
-				$dir = (empty($conf->facture->multidir_output[$conf->entity]) ? $conf->facture->dir_output : $conf->facture->multidir_output[$conf->entity])."/".$objectref;
+				$dir = (empty($conf->facture->multidir_output[$object->entity]) ? $conf->facture->dir_output : $conf->facture->multidir_output[$object->entity])."/".$objectref;
 				$file = $dir."/".$objectref.".pdf";
 			}
 			if (!file_exists($dir)) {
@@ -453,8 +452,13 @@ class pdf_crabe extends ModelePDFFactures
 
 				// You can add more thing under header here, if you increase $extra_under_address_shift too.
 				$extra_under_address_shift = 0;
+				$qrcodestring = '';
 				if (! empty($conf->global->INVOICE_ADD_ZATCA_QR_CODE)) {
 					$qrcodestring = $object->buildZATCAQRString();
+				} elseif (! empty($conf->global->INVOICE_ADD_SWISS_QR_CODE)) {
+					$qrcodestring = $object->buildSwitzerlandQRString();
+				}
+				if ($qrcodestring) {
 					$qrcodecolor = array('25', '25', '25');
 					// set style for QR-code
 					$styleQr = array(
@@ -883,12 +887,12 @@ class pdf_crabe extends ModelePDFFactures
 	/**
 	 *  Show payments table
 	 *
-	 *  @param	TCPDF		$pdf            Object PDF
-	 *  @param  Facture		$object         Object invoice
-	 *  @param  int			$posy           Position y in PDF
-	 *  @param  Translate	$outputlangs    Object langs for output
-	 *  @param  int			$heightforfooter height for footer
-	 *  @return int             			<0 if KO, >0 if OK
+	 *  @param	TCPDF		$pdf            	Object PDF
+	 *  @param  Facture		$object         	Object invoice
+	 *  @param  int			$posy           	Position y in PDF
+	 *  @param  Translate	$outputlangs    	Object langs for output
+	 *  @param  int			$heightforfooter 	Height for footer
+	 *  @return int             				<0 if KO, >0 if OK
 	 */
 	protected function _tableau_versements(&$pdf, $object, $posy, $outputlangs, $heightforfooter = 0)
 	{

@@ -74,7 +74,7 @@ if ($type == 'proposal') {
 	$securekeyseed = getDolGlobalString('PROPOSAL_ONLINE_SIGNATURE_SECURITY_TOKEN');
 }
 
-if (!dol_verifyHash($securekeyseed.$type.$ref.(empty($conf->multicompany->enabled) ? '' : $entity), $SECUREKEY, '0')) {
+if (empty($SECUREKEY) || !dol_verifyHash($securekeyseed.$type.$ref.(empty($conf->multicompany->enabled) ? '' : $entity), $SECUREKEY, '0')) {
 	http_response_code(403);
 	print 'Bad value for securitykey. Value provided '.dol_escape_htmltag($SECUREKEY).' does not match expected value for ref='.dol_escape_htmltag($ref);
 	exit(-1);
@@ -170,7 +170,7 @@ if ($action == "importSignature") {
 						$yforimgstart = (empty($s['h']) ? 240 : $s['h'] - 60);
 						$wforimg = $s['w'] - 20 - $xforimgstart;
 
-						$pdf->Image($upload_dir.$filename, $xforimgstart, $yforimgstart, $wforimg, round($wforimg / 4));	// FIXME Position will be wrong with non A4 format. Use a value from width and height of page minus relative offset.
+						$pdf->Image($upload_dir.$filename, $xforimgstart, $yforimgstart, $wforimg, round($wforimg / 4));
 						//$pdf->Close();
 						$pdf->Output($newpdffilename, "F");
 

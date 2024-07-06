@@ -110,7 +110,11 @@ with
 			if (!@TCPDF_STATIC::file_exists($file)) {
 				// DOL CHANGE If we keep this, the image is not visible on pages after the first one.
 				//var_dump($file.' '.(!@TCPDF_STATIC::file_exists($file)));
-				//return false;
+				//return false;	
+                $tfile = str_replace(' ', '%20', $file);
+				if (@TCPDF_STATIC::file_exists($tfile)) {
+					$file = $tfile;
+				}
 			}
 
 * Replace in tcpdf.php
@@ -270,6 +274,13 @@ RESTLER:
 	with 
 	
 	$loaders = array_unique(static::$rogueLoaders, SORT_REGULAR);
+	
+* Replace CommentParser.php line 423
+	elseif (count($value) && is_numeric($value[0]))
+	
+	with
+	
+	elseif (count($value) && isset($value[0]) && is_numeric($value[0]))
 
 
 * Add a test into AutoLoader.php to complete function loadThisLoader and test if property exists before calling it. For this replace code

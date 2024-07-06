@@ -111,7 +111,7 @@ if (!empty($hookmanager->resPrint)) {
 <br>
 <p class="left">
 <?php
-$constFreeText = 'TAKEPOS_HEADER'.$_SESSION['takeposterminal'];
+$constFreeText = 'TAKEPOS_HEADER'.(empty($_SESSION['takeposterminal']) ? '0' : $_SESSION['takeposterminal']);
 if (!empty($conf->global->TAKEPOS_HEADER) || !empty($conf->global->{$constFreeText})) {
 	$newfreetext = '';
 	$substitutionarray = getCommonSubstitutionArray($langs);
@@ -258,7 +258,7 @@ if ($conf->global->TAKEPOS_SHOW_CUSTOMER) {
 					  } ?></td>
 </tr>
 <?php
-if (!empty($conf->multicurrency->enabled) && $_SESSION["takeposcustomercurrency"] != "" && $conf->currency != $_SESSION["takeposcustomercurrency"]) {
+if (isModEnabled('multicurrency') && $_SESSION["takeposcustomercurrency"] != "" && $conf->currency != $_SESSION["takeposcustomercurrency"]) {
 	//Only show customer currency if multicurrency module is enabled, if currency selected and if this currency selected is not the same as main currency
 	include_once DOL_DOCUMENT_ROOT.'/multicurrency/class/multicurrency.class.php';
 	$multicurrency = new MultiCurrency($db);
@@ -288,7 +288,7 @@ if ($conf->global->TAKEPOS_PRINT_PAYMENT_METHOD) {
 			echo $langs->transnoentitiesnoconv("PaymentTypeShort".$row->code);
 			echo '</td>';
 			echo '<td class="right">';
-			$amount_payment = (!empty($conf->multicurrency->enabled) && $object->multicurrency_tx != 1) ? $row->multicurrency_amount : $row->amount;
+			$amount_payment = (isModEnabled('multicurrency') && $object->multicurrency_tx != 1) ? $row->multicurrency_amount : $row->amount;
 			if ($row->code == "LIQ") {
 				$amount_payment = $amount_payment + $row->pos_change; // Show amount with excess received if is cash payment
 			}
@@ -316,7 +316,7 @@ if ($conf->global->TAKEPOS_PRINT_PAYMENT_METHOD) {
 <br>
 <br>
 <?php
-$constFreeText = 'TAKEPOS_FOOTER'.$_SESSION['takeposterminal'];
+$constFreeText = 'TAKEPOS_FOOTER'.(empty($_SESSION['takeposterminal']) ? '0' : $_SESSION['takeposterminal']);
 if (!empty($conf->global->TAKEPOS_FOOTER) || !empty($conf->global->{$constFreeText})) {
 	$newfreetext = '';
 	$substitutionarray = getCommonSubstitutionArray($langs);

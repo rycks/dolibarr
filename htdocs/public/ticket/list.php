@@ -21,10 +21,6 @@
  *       \brief      Public file to list tickets
  */
 
-if (!defined('NOCSRFCHECK')) {
-	define('NOCSRFCHECK', '1');
-}
-// Do not check anti CSRF attack test
 if (!defined('NOREQUIREMENU')) {
 	define('NOREQUIREMENU', '1');
 }
@@ -60,8 +56,10 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/payments.lib.php';
 $langs->loadLangs(array("companies", "other", "ticket"));
 
 // Get parameters
-$track_id = GETPOST('track_id', 'alpha');
 $action = GETPOST('action', 'aZ09');
+$cancel = GETPOST('cancel', 'aZ09');
+
+$track_id = GETPOST('track_id', 'alpha');
 $email = strtolower(GETPOST('email', 'alpha'));
 
 if (GETPOST('btn_view_ticket_list')) {
@@ -77,6 +75,9 @@ if (isset($_SESSION['email_customer'])) {
 
 $object = new Ticket($db);
 
+// Initialize technical object to manage hooks of page. Note that conf->hooks_modules contains array of hook context
+$hookmanager->initHooks(array('ticketpubliclist', 'globalcard'));
+
 if (empty($conf->ticket->enabled)) {
 	accessforbidden('', 0, 0, 1);
 }
@@ -86,6 +87,13 @@ if (empty($conf->ticket->enabled)) {
 /*
  * Actions
  */
+
+if ($cancel) {
+	$backtopage = DOL_URL_ROOT.'/public/ticket/index.php';
+
+	header("Location: ".$backtopage);
+	exit;
+}
 
 if ($action == "view_ticketlist") {
 	$error = 0;
@@ -182,9 +190,10 @@ $arrayofcss = array('/ticket/css/styles.css.php');
 llxHeaderTicket($langs->trans("Tickets"), "", 0, 0, $arrayofjs, $arrayofcss);
 
 
-print '<div class="ticketpublicarealist">';
 
 if ($action == "view_ticketlist") {
+	print '<div class="ticketpublicarealist">';
+
 	print '<br>';
 	if ($display_ticket_list) {
 		// Filters
@@ -247,7 +256,7 @@ if ($action == "view_ticketlist") {
 		);
 
 		// Extra fields
-		if (is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label'])) {
+		if (isset($extrafields->attributes[$object->table_element]['label']) && is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label'])) {
 			foreach ($extrafields->attributes[$object->table_element]['label'] as $key => $val) {
 				if ($extrafields->attributes[$object->table_element]['type'][$key] != 'separate') {
 					$arrayfields["ef.".$key] = array('label' => $extrafields->attributes[$object->table_element]['label'][$key], 'checked' => ($extrafields->attributes[$object->table_element]['list'][$key] < 0) ? 0 : 1, 'position' => $extrafields->attributes[$object->table_element]['pos'][$key], 'enabled' =>(abs($extrafields->attributes[$object->table_element]['list'][$key]) != 3) && $extrafields->attributes[$object->table_element]['perms'][$key]);
@@ -340,7 +349,7 @@ if ($action == "view_ticketlist") {
 		$sql .= " t.tms,";
 		$sql .= " type.label as type_label, category.label as category_label, severity.label as severity_label";
 		// Add fields for extrafields
-		if (is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label'])) {
+		if (isset($extrafields->attributes[$object->table_element]['label']) && is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label'])) {
 			foreach ($extrafields->attributes[$object->table_element]['label'] as $key => $val) {
 				$sql .= ($extrafields->attributes[$object->table_element]['type'][$key] != 'separate' ? ", ef.".$key." as options_".$key : '');
 			}
@@ -396,6 +405,7 @@ if ($action == "view_ticketlist") {
 			$resql = $db->query($sql);
 			if ($resql) {
 				$num = $db->num_rows($resql);
+
 				print_barre_liste($langs->trans('TicketList'), $page, 'list.php', $param, $sortfield, $sortorder, '', $num, $num_total, 'ticket');
 
 				// Search bar
@@ -407,6 +417,11 @@ if ($action == "view_ticketlist") {
 
 				$varpage = empty($contextpage) ? $url_page_current : $contextpage;
 				$selectedfields = $form->multiSelectArrayWithCheckbox('selectedfields', $arrayfields, $varpage); // This also change content of $arrayfields
+
+				// allow to display information before list
+				$parameters=array('arrayfields'=>$arrayfields);
+				$reshook=$hookmanager->executeHooks('printFieldListHeader', $parameters, $object, $action);    // Note that $action and $object may have been modified by hook
+				print $hookmanager->resPrint;
 
 				print '<table class="liste '.($moreforfilter ? "listwithfilterbefore" : "").'">';
 
@@ -648,13 +663,13 @@ if ($action == "view_ticketlist") {
 					}
 
 					// Extra fields
-					if (is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label'])) {
+					if (isset($extrafields->attributes[$object->table_element]['label']) && is_array($extrafields->attributes[$object->table_element]['label']) && count($extrafields->attributes[$object->table_element]['label'])) {
 						foreach ($extrafields->attributes[$object->table_element]['label'] as $key => $val) {
 							if (!empty($arrayfields["ef.".$key]['checked'])) {
 								print '<td';
-								$align = $extrafields->getAlignFlag($key);
-								if ($align) {
-									print ' align="'.$align.'"';
+								$cssstring = $extrafields->getAlignFlag($key, $object->table_element);
+								if ($cssstring) {
+									print ' class="'.$cssstring.'"';
 								}
 								print '>';
 								$tmpkey = 'options_'.$key;
@@ -701,10 +716,14 @@ if ($action == "view_ticketlist") {
 			dol_print_error($db);
 		}
 	} else {
-		print '<div class="error">Not Allowed<br><a href="'.$_SERVER['PHP_SELF'].'?track_id='.$object->dao->track_id.'">'.$langs->trans('Back').'</a></div>';
+		print '<div class="error">Not Allowed<br><a href="'.$_SERVER['PHP_SELF'].'?track_id='.$object->track_id.'">'.$langs->trans('Back').'</a></div>';
 	}
+
+	print '</div>';
 } else {
-	print '<p class="center">'.$langs->trans("TicketPublicMsgViewLogIn").'</p>';
+	print '<div class="ticketpublicarea">';
+
+	print '<p class="center opacitymedium">'.$langs->trans("TicketPublicMsgViewLogIn").'</p>';
 	print '<br>';
 
 	print '<div id="form_view_ticket">';
@@ -723,13 +742,15 @@ if ($action == "view_ticketlist") {
 
 	print '<p style="text-align: center; margin-top: 1.5em;">';
 	print '<input type="submit" class="button" name="btn_view_ticket_list" value="'.$langs->trans('ViewMyTicketList').'" />';
+	print ' &nbsp; ';
+	print '<input type="submit" class="button button-cancel" name="cancel" value="'.$langs->trans("Cancel").'">';
 	print "</p>\n";
 
 	print "</form>\n";
 	print "</div>\n";
-}
 
-print "</div>";
+	print "</div>";
+}
 
 // End of page
 htmlPrintOnlinePaymentFooter($mysoc, $langs, 0, $suffix, $object);

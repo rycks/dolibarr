@@ -87,7 +87,7 @@ if (empty($reshook)) {
 	// Validate new password
 	if ($action == 'validatenewpassword' && $username && $passworduidhash) {
 		$edituser = new User($db);
-		$result = $edituser->fetch('', $username);
+		$result = $edituser->fetch('', $username, '', 0, $conf->entity);
 		if ($result < 0) {
 			$message = '<div class="error">'.dol_escape_htmltag($langs->trans("ErrorLoginDoesNotExists", $username)).'</div>';
 		} else {
@@ -113,7 +113,7 @@ if (empty($reshook)) {
 	// Action modif mot de passe
 	if ($action == 'buildnewpassword' && $username) {
 		$sessionkey = 'dol_antispam_value';
-		$ok = (array_key_exists($sessionkey, $_SESSION) === true && (strtolower($_SESSION[$sessionkey]) == strtolower($_POST['code'])));
+		$ok = (array_key_exists($sessionkey, $_SESSION) === true && (strtolower($_SESSION[$sessionkey]) == strtolower(GETPOST('code'))));
 
 		// Verify code
 		if (!$ok) {
@@ -122,9 +122,9 @@ if (empty($reshook)) {
 			$isanemail = preg_match('/@/', $username);
 
 			$edituser = new User($db);
-			$result = $edituser->fetch('', $username, '', 1);
+			$result = $edituser->fetch('', $username, '', 1, $conf->entity);
 			if ($result == 0 && $isanemail) {
-				$result = $edituser->fetch('', '', '', 1, -1, $username);
+				$result = $edituser->fetch('', '', '', 1, $conf->entity, $username);
 			}
 
 			if ($result <= 0 && $edituser->error == 'USERNOTFOUND') {

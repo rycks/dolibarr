@@ -126,7 +126,7 @@ $type = $source;
 if ($source == 'proposal') {
 	require_once DOL_DOCUMENT_ROOT.'/comm/propal/class/propal.class.php';
 	$object = new Propal($db);
-	$object->fetch(0, $ref, '', $entity);
+	$result= $object->fetch(0, $ref, '', $entity);
 } else {
 	accessforbidden('Bad value for source');
 	exit;
@@ -169,7 +169,7 @@ if ($action == 'confirm_refusepropal' && $confirm == 'yes') {
 		$message = 'refused';
 		setEventMessages("PropalRefused", null, 'warnings');
 		if (method_exists($object, 'call_trigger')) {
-			//customer is not a user !?! so could we use same user as validation ?
+			// Online customer is not a user, so we use the use that validates the documents
 			$user = new User($db);
 			$user->fetch($object->user_valid_id);
 			$result = $object->call_trigger('PROPAL_CLOSE_REFUSED', $user);
@@ -297,6 +297,7 @@ $error = 0;
 // Signature on commercial proposal
 if ($source == 'proposal') {
 	$found = true;
+	$langs->load("proposal");
 
 	$result = $object->fetch_thirdparty($object->socid);
 

@@ -58,7 +58,7 @@ Requires: mysql, mysql-client
 %if 0%{?suse_version}
 # Voir http://en.opensuse.org/openSUSE:Packaging_Conventions_RPM_Macros
 Group: Productivity/Office/Management
-Requires: apache2, apache2-mod_php5, php5 >= 5.3.0, php5-gd, php5-ldap, php5-imap, php5-mysql, php5-openssl, dejavu
+Requires: apache2, apache2-mod_php, php >= 5.3.0, php-gd, php-ldap, php-imap, php-mysql, php-openssl, dejavu
 Requires: mysql-community-server, mysql-community-server-client 
 BuildRequires: update-desktop-files fdupes
 %else
@@ -308,6 +308,7 @@ done >>%{name}.lang
 %_datadir/dolibarr/htdocs/ticket
 %_datadir/dolibarr/htdocs/user
 %_datadir/dolibarr/htdocs/variants
+%_datadir/dolibarr/htdocs/webhook
 %_datadir/dolibarr/htdocs/webservices
 %_datadir/dolibarr/htdocs/website
 %_datadir/dolibarr/htdocs/workstation

@@ -28,7 +28,7 @@ require_once DOL_DOCUMENT_ROOT.'/projet/class/task.class.php';
 require_once DOL_DOCUMENT_ROOT.'/contact/class/contact.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/project.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
-if ($conf->categorie->enabled) {
+if (isModEnabled('categorie')) {
 	require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
 }
 
@@ -126,7 +126,7 @@ if ($action == 'addcontact') {
 			$formquestion[] = array('type'=> 'other', 'name'=>'tasksavailable', 'label'=>'', 'value' => '<input type="hidden" id="tasksavailable" name="tasksavailable" value="'.implode(',', array_keys($task_to_affect)).'">');
 		}
 
-		$formconfirmtoaddtasks = $form->formconfirm($_SERVER['PHP_SELF'] . $url_redirect, $text, '', 'addcontact_confirm', $formquestion, '', 1, 300, 590);
+		$formconfirmtoaddtasks = $form->formconfirm($_SERVER['PHP_SELF'] . $url_redirect, $text, '', 'addcontact_confirm', $formquestion, '', ((count($formquestion) > 10) ? 0 : 1), 300, 590);
 		$formconfirmtoaddtasks .='
 		 <script>
 		 $(document).ready(function() {
@@ -150,6 +150,11 @@ if ($action == 'addcontact') {
 
 // Add new contact
 if ($action == 'addcontact_confirm' && $user->rights->projet->creer) {
+	if (GETPOST('confirm', 'alpha') == 'no') {
+		header("Location: ".$_SERVER['PHP_SELF']."?id=".$object->id);
+		exit;
+	}
+
 	$contactid = (GETPOST('userid') ? GETPOST('userid', 'int') : GETPOST('contactid', 'int'));
 	$typeid = (GETPOST('typecontact') ? GETPOST('typecontact') : GETPOST('type'));
 
@@ -349,8 +354,10 @@ if ($id > 0 || !empty($ref)) {
 	// Visibility
 	print '<tr><td class="titlefield">'.$langs->trans("Visibility").'</td><td>';
 	if ($object->public) {
+		print img_picto($langs->trans('SharedProject'), 'world', 'class="paddingrightonly"');
 		print $langs->trans('SharedProject');
 	} else {
+		print img_picto($langs->trans('PrivateProject'), 'private', 'class="paddingrightonly"');
 		print $langs->trans('PrivateProject');
 	}
 	print '</td></tr>';
@@ -375,6 +382,9 @@ if ($id > 0 || !empty($ref)) {
 		print '<tr><td>'.$langs->trans("OpportunityAmount").'</td><td>';
 		if (strcmp($object->opp_amount, '')) {
 			print '<span class="amount">'.price($object->opp_amount, '', $langs, 0, 0, 0, $conf->currency).'</span>';
+			if (strcmp($object->opp_percent, '')) {
+				print ' &nbsp; &nbsp; &nbsp; <span title="'.dol_escape_htmltag($langs->trans('OpportunityWeightedAmount')).'"><span class="opacitymedium">'.$langs->trans("Weighted").'</span>: <span class="amount">'.price($object->opp_amount * $object->opp_percent / 100, 0, $langs, 1, 0, -1, $conf->currency).'</span></span>';
+			}
 		}
 		print '</td></tr>';
 	}
@@ -416,7 +426,7 @@ if ($id > 0 || !empty($ref)) {
 	print '</td></tr>';
 
 	// Categories
-	if ($conf->categorie->enabled) {
+	if (isModEnabled('categorie')) {
 		print '<tr><td class="valignmiddle">'.$langs->trans("Categories").'</td><td>';
 		print $form->showCategories($object->id, Categorie::TYPE_PROJECT, 1);
 		print "</td></tr>";

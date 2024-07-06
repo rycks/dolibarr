@@ -32,7 +32,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
 require_once DOL_DOCUMENT_ROOT.'/categories/class/categorie.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/functions2.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
-
+require_once DOL_DOCUMENT_ROOT.'/core/lib/geturl.lib.php';
 
 /**
  *	Class to manage mailman and spip
@@ -147,28 +147,9 @@ class MailmanSpip
 		$curl_url = str_replace($patterns, $replace, $url);
 		dol_syslog('Calling Mailman: '.$curl_url);
 
-		$ch = curl_init($curl_url);
+		$result = getURLContent($curl_url);
 
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($ch, CURLOPT_FAILONERROR, true);
-		@curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);
-		curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, empty($conf->global->MAIN_USE_CONNECT_TIMEOUT) ? 5 : $conf->global->MAIN_USE_CONNECT_TIMEOUT);
-		curl_setopt($ch, CURLOPT_TIMEOUT, empty($conf->global->MAIN_USE_RESPONSE_TIMEOUT) ? 30 : $conf->global->MAIN_USE_RESPONSE_TIMEOUT);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-		$result = curl_exec($ch);
-		dol_syslog('result curl_exec='.$result);
-
-		//An error was found, we store it in $this->error for later
-		if ($result === false || curl_errno($ch) > 0) {
-			$this->error = curl_errno($ch).' '.curl_error($ch);
-			dol_syslog('Error using curl '.$this->error, LOG_ERR);
-		}
-
-		curl_close($ch);
-
-		return $result;
+		return $result['content'];
 	}
 
 	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps

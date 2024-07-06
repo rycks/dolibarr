@@ -27,7 +27,7 @@
  */
 function showOnlineSignatureUrl($type, $ref, $obj = null)
 {
-	global $langs;
+	global $conf, $langs;
 
 	// Load translation files required by the page
 	$langs->loadLangs(array("payment", "paybox"));
@@ -64,7 +64,7 @@ function getOnlineSignatureUrl($mode, $type, $ref = '', $localorexternal = 1, $o
 	global $conf, $dolibarr_main_url_root;
 
 	if (empty($obj)) {
-		//to be compatible with 15.0 -> 19.0
+		// For compatibility with 15.0 -> 19.0
 		global $object;
 		if (empty($object)) {
 			$obj = new stdClass();
@@ -133,7 +133,7 @@ function getOnlineSignatureUrl($mode, $type, $ref = '', $localorexternal = 1, $o
 
 	// For multicompany
 	if (!empty($out) && !empty($conf->multicompany->enabled)) {
-		$out .= "&entity=".$obj->entity; // Check the entity of object because we may have the same reference in several entities
+		$out .= "&entity=".((int) $obj->entity); // Check the entity of object because we may have the same reference in several entities
 	}
 
 	return $out;

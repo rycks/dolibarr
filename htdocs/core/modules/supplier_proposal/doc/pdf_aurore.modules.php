@@ -149,7 +149,6 @@ class pdf_aurore extends ModelePDFSupplierProposal
 		$this->option_tva = 1; // Manage the vat option FACTURE_TVAOPTION
 		$this->option_modereg = 1; // Display payment mode
 		$this->option_condreg = 1; // Display payment terms
-		$this->option_codeproduitservice = 1; // Display product-service code
 		$this->option_multilang = 1; // Available in several languages
 		$this->option_escompte = 1; // Displays if there has been a discount
 		$this->option_credit_note = 1; // Support credit notes
@@ -394,6 +393,13 @@ class pdf_aurore extends ModelePDFSupplierProposal
 						}
 					}
 				}
+
+				// Extrafields in note
+				$extranote = $this->getExtrafieldsInHtml($object, $outputlangs);
+				if (!empty($extranote)) {
+					$notetoshow = dol_concatdesc($notetoshow, $extranote);
+				}
+
 				if ($notetoshow) {
 					$tab_top -= 2;
 

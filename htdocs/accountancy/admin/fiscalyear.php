@@ -96,7 +96,7 @@ $help_url = "EN:Module_Double_Entry_Accounting";
 
 llxHeader('', $title, $help_url);
 
-$sql = "SELECT f.rowid, f.label, f.date_start, f.date_end, f.statut, f.entity";
+$sql = "SELECT f.rowid, f.label, f.date_start, f.date_end, f.statut as status, f.entity";
 $sql .= " FROM ".MAIN_DB_PREFIX."accounting_fiscalyear as f";
 $sql .= " WHERE f.entity = ".$conf->entity;
 $sql .= $db->order($sortfield, $sortorder);
@@ -145,6 +145,8 @@ if ($result) {
 
 			$fiscalyearstatic->ref = $obj->rowid;
 			$fiscalyearstatic->id = $obj->rowid;
+			$fiscalyearstatic->statut = $obj->status;
+			$fiscalyearstatic->status = $obj->status;
 
 			print '<tr class="oddeven">';
 			print '<td>';

@@ -29,7 +29,7 @@ class mailing_partnership extends MailingTargets
 	public $desc = "Thirdparties or members included into a partnership program";
 	public $require_admin = 0;
 
-	public $require_module = array(); // This module allows to select by categories must be also enabled if category module is not activated
+	public $require_module = array('partnership'); // This module allows to select by categories must be also enabled if category module is not activated
 
 	/**
 	 * @var string String with name of icon for myobject. Must be the part after the 'object_' into object_myobject.png
@@ -40,6 +40,8 @@ class mailing_partnership extends MailingTargets
 	 * @var DoliDB Database handler.
 	 */
 	public $db;
+
+	public $enabled = '$conf->partnership->enabled';
 
 
 	/**
@@ -164,8 +166,8 @@ class mailing_partnership extends MailingTargets
 	 *	For example if this selector is used to extract 500 different
 	 *	emails from a text file, this function must return 500.
 	 *
-	 *  @param      string	$sql        Requete sql de comptage
-	 *	@return		int					Nb of recipients
+	 *  @param      string			$sql        Requete sql de comptage
+	 *  @return     int|string      			Nb of recipient, or <0 if error, or '' if NA
 	 */
 	public function getNbOfRecipients($sql = '')
 	{
@@ -185,8 +187,7 @@ class mailing_partnership extends MailingTargets
 
 		//print $sql;
 
-		// La requete doit retourner un champ "nb" pour etre comprise
-		// par parent::getNbOfRecipients
+		// La requete doit retourner un champ "nb" pour etre comprise par parent::getNbOfRecipients
 		return parent::getNbOfRecipients($sql);
 	}
 

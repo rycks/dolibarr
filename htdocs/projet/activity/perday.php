@@ -84,9 +84,9 @@ $monthofday = GETPOST('addtimemonth');
 $dayofday = GETPOST('addtimeday');
 $yearofday = GETPOST('addtimeyear');
 
-/*var_dump(GETPOST('remonth'));
-var_dump(GETPOST('button_search_x'));
-var_dump(GETPOST('button_addtime'));*/
+//var_dump(GETPOST('remonth'));
+//var_dump(GETPOST('button_search_x'));
+//var_dump(GETPOST('button_addtime'));
 
 $daytoparse = $now;
 if ($year && $month && $day) {
@@ -431,7 +431,7 @@ $nav .= dol_print_date(dol_mktime(0, 0, 0, $month, $day, $year), "%A").' ';
 $nav .= " <span id=\"month_name\">".dol_print_date(dol_mktime(0, 0, 0, $month, $day, $year), "day")." </span>\n";
 $nav .= '<a class="inline-block valignmiddle" href="?year='.$next_year."&month=".$next_month."&day=".$next_day.$param.'">'.img_next($langs->trans("Next"))."</a>\n";
 $nav .= ' '.$form->selectDate(-1, '', 0, 0, 2, "addtime", 1, 1).' ';
-$nav .= ' <button type="submit" name="button_search_x" value="x" class="bordertransp"><span class="fa fa-search"></span></button>';
+$nav .= ' <button type="submit" name="button_search_x" value="x" class="bordertransp nobordertransp button_search"><span class="fa fa-search"></span></button>';
 
 $picto = 'clock';
 
@@ -795,12 +795,12 @@ print '</div>';
 
 print '</form>';
 
-$modeinput = 'hours';
-
-if ($conf->use_javascript_ajax) {
+if (!empty($conf->use_javascript_ajax)) {
+	$modeinput = 'hours';
 	print "\n<!-- JS CODE TO ENABLE Tooltips on all object with class classfortooltip -->\n";
 	print '<script type="text/javascript">'."\n";
 	print "jQuery(document).ready(function () {\n";
+	print "		updateTotal(0,\''.$modeinput.'\');\n";
 	print '		jQuery(".timesheetalreadyrecorded").tooltip({
 					show: { collision: "flipfit", effect:\'toggle\', delay:50 },
 					hide: { effect:\'toggle\', delay: 50 },
@@ -809,8 +809,7 @@ if ($conf->use_javascript_ajax) {
 						return \''.dol_escape_js($langs->trans("TimeAlreadyRecorded", $usertoprocess->getFullName($langs))).'\';
 					}
 				});'."\n";
-
-	print '    updateTotal(0,\''.$modeinput.'\');';
+	print " 	jQuery('.inputhour, .inputminute').bind('keyup', function(e) { updateTotal(0, '".$modeinput."') });";
 	print "\n});\n";
 	print '</script>';
 }

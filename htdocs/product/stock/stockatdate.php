@@ -130,8 +130,9 @@ if ($date && $dateIsValid) {	// Avoid heavy sql if mandatory date is not defined
 	$sql .= " SUM(ps.reel) AS stock";
 	$sql .= " FROM ".MAIN_DB_PREFIX."product_stock as ps";
 	$sql .= ", ".MAIN_DB_PREFIX."entrepot as w";
+	$sql .= ", ".MAIN_DB_PREFIX."product as p";
 	$sql .= " WHERE w.entity IN (".getEntity('stock').")";
-	$sql .= " AND w.rowid = ps.fk_entrepot";
+	$sql .= " AND w.rowid = ps.fk_entrepot AND p.rowid = ps.fk_product ";
 	if (!empty($conf->global->ENTREPOT_EXTRA_STATUS) && count($warehouseStatus)) {
 		$sql .= " AND w.statut IN (".$db->sanitize(implode(',', $warehouseStatus)).")";
 	}
@@ -140,6 +141,12 @@ if ($date && $dateIsValid) {	// Avoid heavy sql if mandatory date is not defined
 	}
 	if ($fk_warehouse > 0) {
 		$sql .= " AND ps.fk_entrepot = ".((int) $fk_warehouse);
+	}
+	if ($search_ref) {
+		$sql .= " AND p.ref LIKE '%".$db->escape($search_ref)."%' ";
+	}
+	if ($search_nom) {
+		$sql .= " AND p.label LIKE '%".$db->escape($search_nom)."%' ";
 	}
 	$sql .= " GROUP BY fk_product, fk_entrepot";
 	//print $sql;
@@ -180,8 +187,9 @@ if ($date && $dateIsValid) {
 	$sql = "SELECT sm.fk_product, sm.fk_entrepot, SUM(sm.value) AS stock, COUNT(sm.rowid) AS nbofmovement";
 	$sql .= " FROM ".MAIN_DB_PREFIX."stock_mouvement as sm";
 	$sql .= ", ".MAIN_DB_PREFIX."entrepot as w";
+	$sql .= ", ".MAIN_DB_PREFIX."product as p";
 	$sql .= " WHERE w.entity IN (".getEntity('stock').")";
-	$sql .= " AND w.rowid = sm.fk_entrepot";
+	$sql .= " AND w.rowid = sm.fk_entrepot AND p.rowid = sm.fk_product ";
 	if (!empty($conf->global->ENTREPOT_EXTRA_STATUS) && count($warehouseStatus)) {
 		$sql .= " AND w.statut IN (".$db->sanitize(implode(',', $warehouseStatus)).")";
 	}
@@ -196,7 +204,14 @@ if ($date && $dateIsValid) {
 	if ($fk_warehouse > 0) {
 		$sql .= " AND sm.fk_entrepot = ".((int) $fk_warehouse);
 	}
+	if ($search_ref) {
+		$sql .= " AND p.ref LIKE '%".$db->escape($search_ref)."%' ";
+	}
+	if ($search_nom) {
+		$sql .= " AND p.label LIKE '%".$db->escape($search_nom)."%' ";
+	}
 	$sql .= " GROUP BY sm.fk_product, sm.fk_entrepot";
+
 	$resql = $db->query($sql);
 
 	if ($resql) {
@@ -273,6 +288,12 @@ if (empty($conf->global->STOCK_SUPPORTS_SERVICES)) {
 }
 if (!empty($canvas)) {
 	$sql .= " AND p.canvas = '".$db->escape($canvas)."'";
+}
+if ($search_ref) {
+	$sql .= " AND p.ref LIKE '%".$db->escape($search_ref)."%' ";
+}
+if ($search_nom) {
+	$sql .= " AND p.label LIKE '%".$db->escape($search_nom)."%' ";
 }
 if ($fk_warehouse > 0) {
 	$sql .= ' GROUP BY p.rowid, p.ref, p.label, p.description, p.price, p.price_ttc, p.price_base_type, p.fk_product_type, p.desiredstock, p.seuil_stock_alerte,';
@@ -476,6 +497,8 @@ print $hookmanager->resPrint;
 print "</tr>\n";
 
 $totalbuyingprice = 0;
+$totalcurrentstock = 0;
+$totalvirtualstock = 0;
 
 $i = 0;
 while ($i < ($limit ? min($num, $limit) : $num)) {
@@ -550,6 +573,7 @@ while ($i < ($limit ? min($num, $limit) : $num)) {
 		if ($mode == 'future') {
 			// Current stock
 			print '<td class="right">'.$currentstock.'</td>';
+			$totalcurrentstock += $currentstock;
 
 			print '<td class="right"></td>';
 
@@ -558,6 +582,7 @@ while ($i < ($limit ? min($num, $limit) : $num)) {
 
 			// Final virtual stock
 			print '<td class="right">'.$virtualstock.'</td>';
+			$totalvirtualstock += $virtualstock;
 		} else {
 			// Stock at date
 			print '<td class="right">'.($stock ? $stock : '<span class="opacitymedium">'.$stock.'</span>').'</td>';
@@ -578,7 +603,7 @@ while ($i < ($limit ? min($num, $limit) : $num)) {
 				print price(price2num($objp->sellvalue, 'MT'), 1);
 			} else {
 				$htmltext = $langs->trans("OptionMULTIPRICESIsOn");
-				print $form->textwithtooltip($langs->trans("Variable"), $htmltext);
+				print $form->textwithtooltip('<span class="opacitymedium">'.$langs->trans("Variable").'</span>', $htmltext);
 			}
 			print'</td>';
 
@@ -591,6 +616,7 @@ while ($i < ($limit ? min($num, $limit) : $num)) {
 
 			// Current stock
 			print '<td class="right">'.($currentstock ? $currentstock : '<span class="opacitymedium">0</span>').'</td>';
+			$totalcurrentstock += $currentstock;
 		}
 
 		// Action
@@ -615,11 +641,27 @@ if ($mode == 'future') {
 	$colspan++;
 }
 
-print '<tr class="liste_total"><td>'.$langs->trans("Totalforthispage").'</td>';
-print '<td></td><td></td><td class="right">'.price(price2num($totalbuyingprice, 'MT')).'</td><td></td><td></td><td></td><td></td></tr>';
 
 if (empty($date) || !$dateIsValid) {
 	print '<tr><td colspan="'.$colspan.'"><span class="opacitymedium">'.$langs->trans("EnterADateCriteria").'</span></td></tr>';
+} else {
+	print '<tr class="liste_total">';
+	print '<td>'.$langs->trans("Totalforthispage").'</td>';
+	print '<td></td>';
+	if ($mode == 'future') {
+		print '<td class="right">'.price(price2num($totalcurrentstock, 'MS')).'</td>';
+		print '<td></td>';
+		print '<td></td>';
+		print '<td class="right">'.price(price2num($totalvirtualstock, 'MS')).'</td>';
+	} else {
+		print '<td></td>';
+		print '<td class="right">'.price(price2num($totalbuyingprice, 'MT')).'</td>';
+		print '<td></td>';
+		print '<td></td>';
+		print '<td class="right">'.($productid > 0 ? price(price2num($totalcurrentstock, 'MS')) : '').'</td>';
+	}
+	print '<td></td>';
+	print '</tr>';
 }
 
 print '</table>';

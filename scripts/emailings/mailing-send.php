@@ -82,7 +82,7 @@ $langs->loadLangs(array("main", "mails"));
 print "***** ".$script_file." (".$version.") pid=".dol_getmypid()." *****\n";
 
 if (!empty($conf->global->MAILING_DELAY)) {
-	print 'A delay of '.((float) $conf->global->MAILING_DELAY * 1000000).' millisecond has been set between each email'."\n";
+	print 'A delay of '.((float) $conf->global->MAILING_DELAY * 1000000).' seconds has been set between each email'."\n";
 }
 
 if ($conf->global->MAILING_LIMIT_SENDBYCLI == '-1') {

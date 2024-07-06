@@ -40,6 +40,8 @@ require_once DOL_DOCUMENT_ROOT.'/accountancy/class/accountingjournal.class.php';
 
 $langs->loadLangs(array("companies", "bills", "members", "users", "mails", 'other'));
 
+$optioncss = GETPOST('optioncss', 'aZ'); // Option for the css output (always '' except when 'print')
+
 $action = GETPOST('action', 'aZ09');
 $confirm = GETPOST('confirm', 'alpha');
 $id = GETPOST('rowid', 'int') ?GETPOST('rowid', 'int') : GETPOST('id', 'int');
@@ -76,9 +78,6 @@ $adht = new AdherentType($db);
 $extrafields->fetch_name_optionals_label($object->table_element);
 
 $errmsg = '';
-
-$defaultdelay = 1;
-$defaultdelayunit = 'y';
 
 // Initialize technical object to manage hooks of page. Note that conf->hooks_modules contains array of hook context
 $hookmanager->initHooks(array('subscription'));
@@ -209,6 +208,8 @@ if ($user->rights->adherent->cotisation->creer && $action == 'subscription' && !
 	// Subscription informations
 	$datesubscription = 0;
 	$datesubend = 0;
+	$defaultdelay = !empty($adht->duration_value) ? $adht->duration_value : 1;
+	$defaultdelayunit = !empty($adht->duration_unit) ? $adht->duration_unit : 'y';
 	$paymentdate = ''; // Do not use 0 here, default value is '' that means not filled where 0 means 1970-01-01
 	if (GETPOST("reyear", "int") && GETPOST("remonth", "int") && GETPOST("reday", "int")) {
 		$datesubscription = dol_mktime(0, 0, 0, GETPOST("remonth", "int"), GETPOST("reday", "int"), GETPOST("reyear", "int"));
@@ -466,6 +467,9 @@ if ($rowid > 0) {
 	}
 
 	$adht->fetch($object->typeid);
+
+	$defaultdelay = !empty($adht->duration_value) ? $adht->duration_value : 1;
+	$defaultdelayunit = !empty($adht->duration_unit) ? $adht->duration_unit : 'y';
 
 	$head = member_prepare_head($object);
 
@@ -829,11 +833,11 @@ if ($rowid > 0) {
 				$bankviainvoice = 1;
 			}
 		} else {
-			if (!empty($conf->global->ADHERENT_BANK_USE) && $conf->global->ADHERENT_BANK_USE == 'bankviainvoice' && !empty($conf->banque->enabled) && !empty($conf->societe->enabled) && !empty($conf->facture->enabled)) {
+			if (!empty($conf->global->ADHERENT_BANK_USE) && $conf->global->ADHERENT_BANK_USE == 'bankviainvoice' && !empty($conf->banque->enabled) && !empty($conf->societe->enabled) && isModEnabled('facture')) {
 				$bankviainvoice = 1;
 			} elseif (!empty($conf->global->ADHERENT_BANK_USE) && $conf->global->ADHERENT_BANK_USE == 'bankdirect' && !empty($conf->banque->enabled)) {
 				$bankdirect = 1;
-			} elseif (!empty($conf->global->ADHERENT_BANK_USE) && $conf->global->ADHERENT_BANK_USE == 'invoiceonly' && !empty($conf->banque->enabled) && !empty($conf->societe->enabled) && !empty($conf->facture->enabled)) {
+			} elseif (!empty($conf->global->ADHERENT_BANK_USE) && $conf->global->ADHERENT_BANK_USE == 'invoiceonly' && !empty($conf->banque->enabled) && !empty($conf->societe->enabled) && isModEnabled('facture')) {
 				$invoiceonly = 1;
 			}
 		}
@@ -980,7 +984,7 @@ if ($rowid > 0) {
 			print '"></td></tr>';
 
 			// Complementary action
-			if ((!empty($conf->banque->enabled) || !empty($conf->facture->enabled)) && empty($conf->global->ADHERENT_SUBSCRIPTION_HIDECOMPLEMENTARYACTIONS)) {
+			if ((!empty($conf->banque->enabled) || isModEnabled('facture')) && empty($conf->global->ADHERENT_SUBSCRIPTION_HIDECOMPLEMENTARYACTIONS)) {
 				$company = new Societe($db);
 				if ($object->fk_soc) {
 					$result = $company->fetch($object->fk_soc);
@@ -1001,7 +1005,7 @@ if ($rowid > 0) {
 					print '><label for="bankdirect">  '.$langs->trans("MoreActionBankDirect").'</label><br>';
 				}
 				// Add invoice with no payments
-				if (!empty($conf->societe->enabled) && !empty($conf->facture->enabled)) {
+				if (!empty($conf->societe->enabled) && isModEnabled('facture')) {
 					print '<input type="radio" class="moreaction" id="invoiceonly" name="paymentsave" value="invoiceonly"'.(!empty($invoiceonly) ? ' checked' : '');
 					//if (empty($object->fk_soc)) print ' disabled';
 					print '><label for="invoiceonly"> '.$langs->trans("MoreActionInvoiceOnly");
@@ -1031,7 +1035,7 @@ if ($rowid > 0) {
 					print '</label><br>';
 				}
 				// Add invoice with payments
-				if (!empty($conf->banque->enabled) && !empty($conf->societe->enabled) && !empty($conf->facture->enabled)) {
+				if (!empty($conf->banque->enabled) && !empty($conf->societe->enabled) && isModEnabled('facture')) {
 					print '<input type="radio" class="moreaction" id="bankviainvoice" name="paymentsave" value="bankviainvoice"'.(!empty($bankviainvoice) ? ' checked' : '');
 					//if (empty($object->fk_soc)) print ' disabled';
 					print '><label for="bankviainvoice">  '.$langs->trans("MoreActionBankViaInvoice");
@@ -1163,9 +1167,13 @@ if ($rowid > 0) {
 		print dol_get_fiche_end();
 
 		print '<div class="center">';
-		print '<input type="submit" class="button" name="add" value="'.$langs->trans("AddSubscription").'">';
-		print '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
-		print '<input type="submit" class="button button-cancel" name="cancel" value="'.$langs->trans("Cancel").'">';
+		$parameters = array();
+		$reshook = $hookmanager->executeHooks('addMoreActionsButtons', $parameters, $object, $action);
+		if (empty($reshook)) {
+			print '<input type="submit" class="button" name="add" value="'.$langs->trans("AddSubscription").'">';
+			print '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+			print '<input type="submit" class="button button-cancel" name="cancel" value="'.$langs->trans("Cancel").'">';
+		}
 		print '</div>';
 
 		print '</form>';

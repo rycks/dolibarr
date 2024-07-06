@@ -272,7 +272,8 @@ function dol_dir_list_in_database($path, $filter = "", $excludefilter = null, $s
 					"cover" => $obj->cover,
 					"position" => (int) $obj->position,
 					"acl" => $obj->acl,
-					"share" => $obj->share
+					"share" => $obj->share,
+					"description" => ($mode ? $obj->description : '')
 				);
 			}
 			$i++;
@@ -330,9 +331,9 @@ function completeFileArrayWithDatabaseInfo(&$filearray, $relativedir)
 		}
 	}
 
-	/*var_dump($relativedir);
-	var_dump($filearray);
-	var_dump($filearrayindatabase);*/
+	//var_dump($relativedir);
+	//var_dump($filearray);
+	//var_dump($filearrayindatabase);
 
 	// Complete filearray with properties found into $filearrayindatabase
 	foreach ($filearray as $key => $val) {
@@ -965,6 +966,69 @@ function dol_move($srcfile, $destfile, $newmask = 0, $overwriteifexists = 1, $te
 }
 
 /**
+ * Move a directory into another name.
+ *
+ * @param	string	$srcdir 			Source directory
+ * @param	string 	$destdir			Destination directory
+ * @param	int		$overwriteifexists	Overwrite directory if exists (1 by default)
+ * @param	int		$indexdatabase		Index new file into database.
+ * @param	int		$renamedircontent	Rename contents inside srcdir.
+ *
+ * @return boolean 	True if OK, false if KO
+*/
+function dol_move_dir($srcdir, $destdir, $overwriteifexists = 1, $indexdatabase = 1, $renamedircontent = 1)
+{
+
+	global $user, $db, $conf;
+	$result = false;
+
+	dol_syslog("files.lib.php::dol_move_dir srcdir=".$srcdir." destdir=".$destdir." overwritifexists=".$overwriteifexists." indexdatabase=".$indexdatabase." renamedircontent=".$renamedircontent);
+	$srcexists = dol_is_dir($srcdir);
+	$srcbasename = basename($srcdir);
+	$destexists = dol_is_dir($destdir);
+
+	if (!$srcexists) {
+		dol_syslog("files.lib.php::dol_move_dir srcdir does not exists. we ignore the move request.");
+		return false;
+	}
+
+	if ($overwriteifexists || !$destexists) {
+		$newpathofsrcdir = dol_osencode($srcdir);
+		$newpathofdestdir = dol_osencode($destdir);
+
+		$result = @rename($newpathofsrcdir, $newpathofdestdir);
+
+		if ($result && $renamedircontent) {
+			if (file_exists($newpathofdestdir)) {
+				$destbasename = basename($newpathofdestdir);
+				$files = dol_dir_list($newpathofdestdir);
+				if (!empty($files) && is_array($files)) {
+					foreach ($files as $key => $file) {
+						if (!file_exists($file["fullname"])) continue;
+						$filepath = $file["path"];
+						$oldname = $file["name"];
+
+						$newname = str_replace($srcbasename, $destbasename, $oldname);
+						if (!empty($newname) && $newname !== $oldname) {
+							if ($file["type"] == "dir") {
+								$res = dol_move_dir($filepath.'/'.$oldname, $filepath.'/'.$newname, $overwriteifexists, $indexdatabase, $renamedircontent);
+							} else {
+								$res = dol_move($filepath.'/'.$oldname, $filepath.'/'.$newname);
+							}
+							if (!$res) {
+								return $result;
+							}
+						}
+					}
+					$result = true;
+				}
+			}
+		}
+	}
+	return $result;
+}
+
+/**
  *	Unescape a file submitted by upload.
  *  PHP escape char " (%22) or char ' (%27) into $FILES.
  *
@@ -1380,7 +1444,7 @@ function dol_delete_preview($object)
 	} elseif ($object->element == 'invoice_supplier') {
 		$dir = $conf->fournisseur->facture->dir_output;
 	} elseif ($object->element == 'project') {
-		$dir = $conf->projet->dir_output;
+		$dir = $conf->project->dir_output;
 	} elseif ($object->element == 'shipping') {
 		$dir = $conf->expedition->dir_output.'/sending';
 	} elseif ($object->element == 'delivery') {
@@ -1462,7 +1526,7 @@ function dol_meta_create($object)
 	} elseif ($object->element == 'invoice_supplier') {
 		$dir = $conf->fournisseur->dir_output.'/facture';
 	} elseif ($object->element == 'project') {
-		$dir = $conf->projet->dir_output;
+		$dir = $conf->project->dir_output;
 	} elseif ($object->element == 'shipping') {
 		$dir = $conf->expedition->dir_output.'/sending';
 	} elseif ($object->element == 'delivery') {
@@ -1626,9 +1690,15 @@ function dol_add_file_process($upload_dir, $allowoverwrite = 0, $donotupdatesess
 				$resupload = dol_move_uploaded_file($TFile['tmp_name'][$i], $destfull, $allowoverwrite, 0, $TFile['error'][$i], 0, $varfiles, $upload_dir);
 
 				if (is_numeric($resupload) && $resupload > 0) {   // $resupload can be 'ErrorFileAlreadyExists'
-					global $maxwidthsmall, $maxheightsmall, $maxwidthmini, $maxheightmini;
-
 					include_once DOL_DOCUMENT_ROOT.'/core/lib/images.lib.php';
+
+					$tmparraysize = getDefaultImageSizes();
+					$maxwidthsmall = $tmparraysize['maxwidthsmall'];
+					$maxheightsmall = $tmparraysize['maxheightsmall'];
+					$maxwidthmini = $tmparraysize['maxwidthmini'];
+					$maxheightmini = $tmparraysize['maxheightmini'];
+					//$quality = $tmparraysize['quality'];
+					$quality = 50;	// For thumbs, we force quality to 50
 
 					// Generate thumbs.
 					if ($generatethumbs) {
@@ -1637,10 +1707,10 @@ function dol_add_file_process($upload_dir, $allowoverwrite = 0, $donotupdatesess
 							// We can't use $object->addThumbs here because there is no $object known
 
 							// Used on logon for example
-							$imgThumbSmall = vignette($destfull, $maxwidthsmall, $maxheightsmall, '_small', 50, "thumbs");
+							$imgThumbSmall = vignette($destfull, $maxwidthsmall, $maxheightsmall, '_small', $quality, "thumbs");
 							// Create mini thumbs for image (Ratio is near 16/9)
 							// Used on menu or for setup page for example
-							$imgThumbMini = vignette($destfull, $maxwidthmini, $maxheightmini, '_mini', 50, "thumbs");
+							$imgThumbMini = vignette($destfull, $maxwidthmini, $maxheightmini, '_mini', $quality, "thumbs");
 						}
 					}
 
@@ -2084,65 +2154,115 @@ function dol_compress_file($inputfile, $outputfile, $mode = "gz", &$errorstring 
  */
 function dol_uncompress($inputfile, $outputdir)
 {
-	global $conf, $langs;
+	global $conf, $langs, $db;
 
-	if (defined('ODTPHP_PATHTOPCLZIP') && empty($conf->global->MAIN_USE_ZIPARCHIVE_FOR_ZIP_UNCOMPRESS)) {
-		dol_syslog("Constant ODTPHP_PATHTOPCLZIP for pclzip library is set to ".ODTPHP_PATHTOPCLZIP.", so we use Pclzip to unzip into ".$outputdir);
-		include_once ODTPHP_PATHTOPCLZIP.'/pclzip.lib.php';
-		$archive = new PclZip($inputfile);
+	$fileinfo = pathinfo($inputfile);
+	$fileinfo["extension"] = strtolower($fileinfo["extension"]);
 
-		// Extract into outputdir, but only files that match the regex '/^((?!\.\.).)*$/' that means "does not include .."
-		$result = $archive->extract(PCLZIP_OPT_PATH, $outputdir, PCLZIP_OPT_BY_PREG, '/^((?!\.\.).)*$/');
+	if ($fileinfo["extension"] == "zip") {
+		if (defined('ODTPHP_PATHTOPCLZIP') && empty($conf->global->MAIN_USE_ZIPARCHIVE_FOR_ZIP_UNCOMPRESS)) {
+			dol_syslog("Constant ODTPHP_PATHTOPCLZIP for pclzip library is set to ".ODTPHP_PATHTOPCLZIP.", so we use Pclzip to unzip into ".$outputdir);
+			include_once ODTPHP_PATHTOPCLZIP.'/pclzip.lib.php';
+			$archive = new PclZip($inputfile);
 
-		if (!is_array($result) && $result <= 0) {
-			return array('error'=>$archive->errorInfo(true));
-		} else {
-			$ok = 1;
-			$errmsg = '';
-			// Loop on each file to check result for unzipping file
-			foreach ($result as $key => $val) {
-				if ($val['status'] == 'path_creation_fail') {
-					$langs->load("errors");
-					$ok = 0;
-					$errmsg = $langs->trans("ErrorFailToCreateDir", $val['filename']);
-					break;
+			// We create output dir manually, so it uses the correct permission (When created by the archive->extract, dir is rwx for everybody).
+			dol_mkdir(dol_sanitizePathName($outputdir));
+
+			// Extract into outputdir, but only files that match the regex '/^((?!\.\.).)*$/' that means "does not include .."
+			$result = $archive->extract(PCLZIP_OPT_PATH, $outputdir, PCLZIP_OPT_BY_PREG, '/^((?!\.\.).)*$/');
+
+			if (!is_array($result) && $result <= 0) {
+				return array('error'=>$archive->errorInfo(true));
+			} else {
+				$ok = 1;
+				$errmsg = '';
+				// Loop on each file to check result for unzipping file
+				foreach ($result as $key => $val) {
+					if ($val['status'] == 'path_creation_fail') {
+						$langs->load("errors");
+						$ok = 0;
+						$errmsg = $langs->trans("ErrorFailToCreateDir", $val['filename']);
+						break;
+					}
+				}
+
+				if ($ok) {
+					return array();
+				} else {
+					return array('error'=>$errmsg);
 				}
 			}
+		}
 
-			if ($ok) {
+		if (class_exists('ZipArchive')) {	// Must install php-zip to have it
+			dol_syslog("Class ZipArchive is set so we unzip using ZipArchive to unzip into ".$outputdir);
+			$zip = new ZipArchive;
+			$res = $zip->open($inputfile);
+			if ($res === true) {
+				//$zip->extractTo($outputdir.'/');
+				// We must extract one file at time so we can check that file name does not contains '..' to avoid transversal path of zip built for example using
+				// python3 path_traversal_archiver.py <Created_file_name> test.zip -l 10 -p tmp/
+				// with -l is the range of dot to go back in path.
+				// and path_traversal_archiver.py found at https://github.com/Alamot/code-snippets/blob/master/path_traversal/path_traversal_archiver.py
+				for ($i = 0; $i < $zip->numFiles; $i++) {
+					if (preg_match('/\.\./', $zip->getNameIndex($i))) {
+						dol_syslog("Warning: Try to unzip a file with a transversal path ".$zip->getNameIndex($i), LOG_WARNING);
+						continue; // Discard the file
+					}
+					$zip->extractTo($outputdir.'/', array($zip->getNameIndex($i)));
+				}
+
+				$zip->close();
 				return array();
 			} else {
-				return array('error'=>$errmsg);
+				return array('error'=>'ErrUnzipFails');
 			}
 		}
-	}
 
-	if (class_exists('ZipArchive')) {	// Must install php-zip to have it
-		dol_syslog("Class ZipArchive is set so we unzip using ZipArchive to unzip into ".$outputdir);
-		$zip = new ZipArchive;
-		$res = $zip->open($inputfile);
-		if ($res === true) {
-			//$zip->extractTo($outputdir.'/');
-			// We must extract one file at time so we can check that file name does not contains '..' to avoid transversal path of zip built for example using
-			// python3 path_traversal_archiver.py <Created_file_name> test.zip -l 10 -p tmp/
-			// with -l is the range of dot to go back in path.
-			// and path_traversal_archiver.py found at https://github.com/Alamot/code-snippets/blob/master/path_traversal/path_traversal_archiver.py
-			for ($i = 0; $i < $zip->numFiles; $i++) {
-				if (preg_match('/\.\./', $zip->getNameIndex($i))) {
-					dol_syslog("Warning: Try to unzip a file with a transversal path ".$zip->getNameIndex($i), LOG_WARNING);
-					continue; // Discard the file
-				}
-				$zip->extractTo($outputdir.'/', array($zip->getNameIndex($i)));
+		return array('error'=>'ErrNoZipEngine');
+	} elseif (in_array($fileinfo["extension"], array('gz', 'bz2', 'zst'))) {
+		include_once DOL_DOCUMENT_ROOT."/core/class/utils.class.php";
+		$utils = new Utils($db);
+
+		dol_mkdir(dol_sanitizePathName($outputdir));
+		$outputfilename = escapeshellcmd(dol_sanitizePathName($outputdir).'/'.dol_sanitizeFileName($fileinfo["filename"]));
+		dol_delete_file($outputfilename.'.tmp');
+		dol_delete_file($outputfilename.'.err');
+
+		$extension = strtolower(pathinfo($fileinfo["filename"], PATHINFO_EXTENSION));
+		if ($extension == "tar") {
+			$cmd = 'tar -C '.escapeshellcmd(dol_sanitizePathName($outputdir)).' -xvf '.escapeshellcmd(dol_sanitizePathName($fileinfo["dirname"]).'/'.dol_sanitizeFileName($fileinfo["basename"]));
+
+			$resarray = $utils->executeCLI($cmd, $outputfilename.'.tmp', 0, $outputfilename.'.err', 0);
+			if ($resarray["result"] != 0) {
+				$resarray["error"] .= file_get_contents($outputfilename.'.err');
 			}
-
-			$zip->close();
-			return array();
 		} else {
-			return array('error'=>'ErrUnzipFails');
+			$program = "";
+			if ($fileinfo["extension"] == "gz") {
+				$program = 'gzip';
+			} elseif ($fileinfo["extension"] == "bz2") {
+				$program = 'bzip2';
+			} elseif ($fileinfo["extension"] == "zst") {
+				$program = 'zstd';
+			} else {
+				return array('error'=>'ErrorBadFileExtension');
+			}
+			$cmd = $program.' -dc '.escapeshellcmd(dol_sanitizePathName($fileinfo["dirname"]).'/'.dol_sanitizeFileName($fileinfo["basename"]));
+			$cmd .= ' > '.$outputfilename;
+
+			$resarray = $utils->executeCLI($cmd, $outputfilename.'.tmp', 0, null, 1, $outputfilename.'.err');
+			if ($resarray["result"] != 0) {
+				$errfilecontent = @file_get_contents($outputfilename.'.err');
+				if ($errfilecontent) {
+					$resarray["error"] .= " - ".$errfilecontent;
+				}
+			}
 		}
+		return $resarray["result"] != 0 ? array('error' => $resarray["error"]) : array();
 	}
 
-	return array('error'=>'ErrNoZipEngine');
+	return array('error'=>'ErrorBadFileExtension');
 }
 
 
@@ -2322,7 +2442,7 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 	if (empty($refname)) {
 		$refname = basename(dirname($original_file)."/");
 		if ($refname == 'thumbs' || $refname == 'temp') {
-			// If we get the thumbns directory, we must go one step higher. For example original_file='10/thumbs/myfile_small.jpg' -> refname='10'
+			// If we get the thumbs directory, we must go one step higher. For example original_file='10/thumbs/myfile_small.jpg' -> refname='10'
 			$refname = basename(dirname(dirname($original_file))."/");
 		}
 	}
@@ -2349,15 +2469,15 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 		$accessallowed = ($user->admin && basename($original_file) == $original_file && preg_match('/^dolibarr.*\.log$/', basename($original_file)));
 		$original_file = $dolibarr_main_data_root.'/'.$original_file;
 	} elseif ($modulepart == 'doctemplates' && !empty($dolibarr_main_data_root)) {
-		// Wrapping for *.log files, like when used with url http://.../document.php?modulepart=logs&file=dolibarr.log
+		// Wrapping for doctemplates
 		$accessallowed = $user->admin;
 		$original_file = $dolibarr_main_data_root.'/doctemplates/'.$original_file;
 	} elseif ($modulepart == 'doctemplateswebsite' && !empty($dolibarr_main_data_root)) {
-		// Wrapping for *.zip files, like when used with url http://.../document.php?modulepart=packages&file=module_myfile.zip
+		// Wrapping for doctemplates of websites
 		$accessallowed = ($fuser->rights->website->write && preg_match('/\.jpg$/i', basename($original_file)));
 		$original_file = $dolibarr_main_data_root.'/doctemplates/websites/'.$original_file;
 	} elseif ($modulepart == 'packages' && !empty($dolibarr_main_data_root)) {
-		// Wrapping for *.zip files, like when used with url http://.../document.php?modulepart=packages&file=module_myfile.zip
+		// Wrapping for *.zip package files, like when used with url http://.../document.php?modulepart=packages&file=module_myfile.zip
 		// Dir for custom dirs
 		$tmp = explode(',', $dolibarr_main_document_root_alt);
 		$dirins = $tmp[0];
@@ -2370,7 +2490,10 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 		$original_file = $conf->mycompany->dir_output.'/'.$original_file;
 	} elseif ($modulepart == 'userphoto' && !empty($conf->user->dir_output)) {
 		// Wrapping for users photos
-		$accessallowed = 1;
+		$accessallowed = 0;
+		if (preg_match('/^\d+\/photos\//', $original_file)) {
+			$accessallowed = 1;
+		}
 		$original_file = $conf->user->dir_output.'/'.$original_file;
 	} elseif (($modulepart == 'companylogo') && !empty($conf->mycompany->dir_output)) {
 		// Wrapping for users logos
@@ -2378,7 +2501,10 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 		$original_file = $conf->mycompany->dir_output.'/logos/'.$original_file;
 	} elseif ($modulepart == 'memberphoto' && !empty($conf->adherent->dir_output)) {
 		// Wrapping for members photos
-		$accessallowed = 1;
+		$accessallowed = 0;
+		if (preg_match('/^\d+\/photos\//', $original_file)) {
+			$accessallowed = 1;
+		}
 		$original_file = $conf->adherent->dir_output.'/'.$original_file;
 	} elseif ($modulepart == 'apercufacture' && !empty($conf->facture->multidir_output[$entity])) {
 		// Wrapping pour les apercu factures
@@ -2453,7 +2579,7 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 		}
 		$original_file = $conf->expensereport->dir_output.'/'.$original_file;
 	} elseif (($modulepart == 'apercuexpensereport') && !empty($conf->expensereport->dir_output)) {
-		// Wrapping pour les apercu supplier invoice
+		// Wrapping pour les apercu expense report
 		if ($fuser->rights->expensereport->{$lire}) {
 			$accessallowed = 1;
 		}
@@ -2693,7 +2819,7 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 		}
 		$original_file = $conf->commande->multidir_output[$entity].'/'.$original_file;
 		$sqlprotectagainstexternals = "SELECT fk_soc as fk_soc FROM ".MAIN_DB_PREFIX."commande WHERE ref='".$db->escape($refname)."' AND entity IN (".getEntity('order').")";
-	} elseif ($modulepart == 'project' && !empty($conf->projet->dir_output)) {
+	} elseif ($modulepart == 'project' && !empty($conf->project->multidir_output[$entity])) {
 		// Wrapping pour les projets
 		if ($fuser->rights->projet->{$lire} || preg_match('/^specimen/i', $original_file)) {
 			$accessallowed = 1;
@@ -2705,9 +2831,9 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 				$accessallowed = checkUserAccessToObject($user, array('projet'), $tmpproject->id, 'projet&project', '', '', 'rowid', '');
 			}
 		}
-		$original_file = $conf->projet->dir_output.'/'.$original_file;
+		$original_file = $conf->project->multidir_output[$entity].'/'.$original_file;
 		$sqlprotectagainstexternals = "SELECT fk_soc as fk_soc FROM ".MAIN_DB_PREFIX."projet WHERE ref='".$db->escape($refname)."' AND entity IN (".getEntity('project').")";
-	} elseif ($modulepart == 'project_task' && !empty($conf->projet->dir_output)) {
+	} elseif ($modulepart == 'project_task' && !empty($conf->project->multidir_output[$entity])) {
 		if ($fuser->rights->projet->{$lire} || preg_match('/^specimen/i', $original_file)) {
 			$accessallowed = 1;
 			// If we known $id of project, call checkUserAccessToObject to check permission on properties and contact of project
@@ -2718,7 +2844,7 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 				$accessallowed = checkUserAccessToObject($user, array('projet_task'), $tmptask->id, 'projet_task&project', '', '', 'rowid', '');
 			}
 		}
-		$original_file = $conf->projet->dir_output.'/'.$original_file;
+		$original_file = $conf->project->multidir_output[$entity].'/'.$original_file;
 		$sqlprotectagainstexternals = "SELECT fk_soc as fk_soc FROM ".MAIN_DB_PREFIX."projet WHERE ref='".$db->escape($refname)."' AND entity IN (".getEntity('project').")";
 	} elseif (($modulepart == 'commande_fournisseur' || $modulepart == 'order_supplier') && !empty($conf->fournisseur->commande->dir_output)) {
 		// Wrapping pour les commandes fournisseurs
@@ -2746,7 +2872,7 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 		if ($fuser->rights->facture->{$lire} || preg_match('/^specimen/i', $original_file)) {
 			$accessallowed = 1;
 		}
-		if ($fuser->societe_id > 0) {
+		if ($fuser->socid > 0) {
 			$original_file = $conf->facture->dir_output.'/payments/private/'.$fuser->id.'/'.$original_file;
 		} else {
 			$original_file = $conf->facture->dir_output.'/payments/'.$original_file;
@@ -2859,7 +2985,7 @@ function dol_check_secure_access_document($modulepart, $original_file, $entity, 
 		$accessallowed = $user->rights->import->run;
 		$original_file = $conf->import->dir_temp.'/'.$original_file;
 	} elseif ($modulepart == 'recruitment' && !empty($conf->recruitment->dir_output)) {
-		// Wrapping for import module
+		// Wrapping for recruitment module
 		$accessallowed = $user->rights->recruitment->recruitmentjobposition->read;
 		$original_file = $conf->recruitment->dir_output.'/'.$original_file;
 	} elseif ($modulepart == 'editor' && !empty($conf->fckeditor->dir_output)) {

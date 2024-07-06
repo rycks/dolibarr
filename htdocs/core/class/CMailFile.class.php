@@ -141,7 +141,10 @@ class CMailFile
 	 */
 	public function __construct($subject, $to, $from, $msg, $filename_list = array(), $mimetype_list = array(), $mimefilename_list = array(), $addr_cc = "", $addr_bcc = "", $deliveryreceipt = 0, $msgishtml = 0, $errors_to = '', $css = '', $trackid = '', $moreinheader = '', $sendcontext = 'standard', $replyto = '')
 	{
-		global $conf, $dolibarr_main_data_root;
+		global $conf, $dolibarr_main_data_root, $user;
+
+		dol_syslog("CMailFile::CMailfile: charset=".$conf->file->character_set_client." from=$from, to=$to, addr_cc=$addr_cc, addr_bcc=$addr_bcc, errors_to=$errors_to, replyto=$replyto trackid=$trackid sendcontext=$sendcontext", LOG_DEBUG);
+		dol_syslog("CMailFile::CMailfile: subject=".$subject.", deliveryreceipt=".$deliveryreceipt.", msgishtml=".$msgishtml, LOG_DEBUG);
 
 		// Clean values of $mimefilename_list
 		if (is_array($mimefilename_list)) {
@@ -150,31 +153,7 @@ class CMailFile
 			}
 		}
 
-		// Add autocopy to if not already in $to (Note: Adding bcc for specific modules are also done from pages)
-		if (!empty($conf->global->MAIN_MAIL_AUTOCOPY_TO) && !preg_match('/'.preg_quote($conf->global->MAIN_MAIL_AUTOCOPY_TO, '/').'/i', $to)) {
-			$addr_bcc .= ($addr_bcc ? ', ' : '').$conf->global->MAIN_MAIL_AUTOCOPY_TO;
-		}
-
-		$this->subject = $subject;
-		$this->addr_to = $to;
-		$this->addr_from = $from;
-		$this->msg = $msg;
-		$this->filename_list = $filename_list;
-		$this->mimetype_list = $mimetype_list;
-		$this->mimefilename_list = $mimefilename_list;
-		$this->addr_cc = $addr_cc;
-		$this->addr_bcc = $addr_bcc;
-		$this->deliveryreceipt = $deliveryreceipt;
-		if (empty($replyto)) {
-			$replyto = $from;
-		}
-		$this->reply_to = $replyto;
-		$this->errors_to = $errors_to;
-		$this->trackid = $trackid;
 		$this->sendcontext = $sendcontext;
-		$this->filename_list = $filename_list;
-		$this->mimetype_list = $mimetype_list;
-		$this->mimefilename_list = $mimefilename_list;
 
 		// Define this->sendmode
 		$this->sendmode = '';
@@ -187,10 +166,7 @@ class CMailFile
 			}
 		}
 		if (empty($this->sendmode)) {
-			$this->sendmode = $conf->global->MAIN_MAIL_SENDMODE;
-		}
-		if (empty($this->sendmode)) {
-			$this->sendmode = 'mail';
+			$this->sendmode = (!empty($conf->global->MAIN_MAIL_SENDMODE) ? $conf->global->MAIN_MAIL_SENDMODE : 'mail');
 		}
 
 		// We define end of line (RFC 821).
@@ -211,9 +187,6 @@ class CMailFile
 
 		// On defini alternative_boundary
 		$this->alternative_boundary = 'mul_'.dol_hash(uniqid("dolibarr3"), 3); // Force md5 hash (does not contains special chars)
-
-		dol_syslog("CMailFile::CMailfile: sendmode=".$this->sendmode." charset=".$conf->file->character_set_client." from=$from, to=$to, addr_cc=$addr_cc, addr_bcc=$addr_bcc, errors_to=$errors_to, replyto=$replyto trackid=$trackid sendcontext=$sendcontext", LOG_DEBUG);
-		dol_syslog("CMailFile::CMailfile: subject=".$subject.", deliveryreceipt=".$deliveryreceipt.", msgishtml=".$msgishtml, LOG_DEBUG);
 
 		if (empty($subject)) {
 			dol_syslog("CMailFile::CMailfile: Try to send an email with empty subject");
@@ -279,20 +252,52 @@ class CMailFile
 			}
 		}
 
-		// Add autocopy to if not already in $to (Note: Adding bcc for specific modules are also done from pages)
-		if (!empty($conf->global->MAIN_MAIL_AUTOCOPY_TO) && !preg_match('/'.preg_quote($conf->global->MAIN_MAIL_AUTOCOPY_TO, '/').'/i', $to)) {
-			$addr_bcc .= ($addr_bcc ? ', ' : '').$conf->global->MAIN_MAIL_AUTOCOPY_TO;
+		// Add auto copy to if not already in $to (Note: Adding bcc for specific modules are also done from pages)
+		// For example MAIN_MAIL_AUTOCOPY_TO can be 'email@example.com, __USER_EMAIL__, ...'
+		if (!empty($conf->global->MAIN_MAIL_AUTOCOPY_TO)) {
+			$listofemailstoadd = explode(',', $conf->global->MAIN_MAIL_AUTOCOPY_TO);
+			foreach ($listofemailstoadd as $key => $val) {
+				$emailtoadd = $listofemailstoadd[$key];
+				if (trim($emailtoadd) == '__USER_EMAIL__') {
+					if (!empty($user) && !empty($user->email)) {
+						$emailtoadd = $user->email;
+					} else {
+						$emailtoadd = '';
+					}
+				}
+				if ($emailtoadd && preg_match('/'.preg_quote($emailtoadd, '/').'/i', $to)) {
+					$emailtoadd = '';	// Email already in the "To"
+				}
+				if ($emailtoadd) {
+					$listofemailstoadd[$key] = $emailtoadd;
+				} else {
+					unset($listofemailstoadd[$key]);
+				}
+			}
+			if (!empty($listofemailstoadd)) {
+				$addr_bcc .= ($addr_bcc ? ', ' : '').join(', ', $listofemailstoadd);
+			}
 		}
 
+		$this->subject = $subject;
 		$this->addr_to = $to;
+		$this->addr_from = $from;
+		$this->msg = $msg;
+		$this->filename_list = $filename_list;
+		$this->mimetype_list = $mimetype_list;
+		$this->mimefilename_list = $mimefilename_list;
 		$this->addr_cc = $addr_cc;
 		$this->addr_bcc = $addr_bcc;
-		$this->reply_to = $replyto;
-		$this->addr_from = $from;
-		$this->subject = $subject;
-		$this->errors_to = $errors_to;
 		$this->deliveryreceipt = $deliveryreceipt;
+		if (empty($replyto)) {
+			$replyto = $from;
+		}
+		$this->reply_to = $replyto;
+		$this->errors_to = $errors_to;
 		$this->trackid = $trackid;
+		$this->filename_list = $filename_list;
+		$this->mimetype_list = $mimetype_list;
+		$this->mimefilename_list = $mimefilename_list;
 
 		if (!empty($conf->global->MAIN_MAIL_FORCE_SENDTO)) {
 			$this->addr_to = $conf->global->MAIN_MAIL_FORCE_SENDTO;
@@ -309,6 +314,8 @@ class CMailFile
 				$keyforsslseflsigned = 'MAIN_MAIL_EMAIL_SMTP_ALLOW_SELF_SIGNED_'.$smtpContextKey;
 			}
 		}
+
+		dol_syslog("CMailFile::CMailfile: sendmode=".$this->sendmode." addr_bcc=$addr_bcc, replyto=$replyto", LOG_DEBUG);
 
 		// We set all data according to choosed sending method.
 		// We also set a value for ->msgid

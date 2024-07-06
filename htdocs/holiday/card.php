@@ -49,6 +49,7 @@ $confirm = GETPOST('confirm', 'alpha');
 $id = GETPOST('id', 'int');
 $ref = GETPOST('ref', 'alpha');
 $fuserid = (GETPOST('fuserid', 'int') ?GETPOST('fuserid', 'int') : $user->id);
+$socid = GETPOST('socid', 'int');
 
 // Load translation files required by the page
 $langs->loadLangs(array("other", "holiday", "mails", "trips"));
@@ -577,7 +578,7 @@ if (empty($reshook)) {
 
 			// If no SQL error, we redirect to the request form
 			if (!$error) {
-				// Calculcate number of days consummed
+				// Calculcate number of days consumed
 				$nbopenedday = num_open_day($object->date_debut_gmt, $object->date_fin_gmt, 0, 1, $object->halfday);
 				$soldeActuel = $object->getCpforUser($object->fk_user, $object->fk_type);
 				$newSolde = ($soldeActuel - $nbopenedday);
@@ -660,7 +661,7 @@ if (empty($reshook)) {
 	}
 
 	if ($action == 'confirm_refuse' && GETPOST('confirm', 'alpha') == 'yes') {
-		if (!empty($_POST['detail_refuse'])) {
+		if (GETPOST('detail_refuse')) {
 			$object->fetch($id);
 
 			// If status pending validation and validator = user
@@ -798,7 +799,7 @@ if (empty($reshook)) {
 					$error++;
 				}
 
-				// Calculcate number of days consummed
+				// Calculcate number of days consumed
 				$nbopenedday = num_open_day($object->date_debut_gmt, $object->date_fin_gmt, 0, 1, $object->halfday);
 
 				$soldeActuel = $object->getCpforUser($object->fk_user, $object->fk_type);
@@ -911,6 +912,8 @@ $help_url = 'EN:Module_Holiday';
 
 llxHeader('', $title, $help_url);
 
+$edit = false;
+
 if ((empty($id) && empty($ref)) || $action == 'create' || $action == 'add') {
 	// If user has no permission to create a leave
 	if ((in_array($fuserid, $childids) && empty($user->rights->holiday->write)) || (!in_array($fuserid, $childids) && (empty($conf->global->MAIN_USE_ADVANCED_PERMS) || empty($user->rights->holiday->writeall_advance)))) {
@@ -926,7 +929,7 @@ if ((empty($id) && empty($ref)) || $action == 'create' || $action == 'add') {
 					$errors[] = $langs->trans('ErrorEndDateCP');
 					break;
 				case 'SQL_Create':
-					$errors[] = $langs->trans('ErrorSQLCreateCP').' <b>'.htmlentities($_GET['msg']).'</b>';
+					$errors[] = $langs->trans('ErrorSQLCreateCP');
 					break;
 				case 'CantCreate':
 					$errors[] = $langs->trans('CantCreateCP');
@@ -993,6 +996,7 @@ if ((empty($id) && empty($ref)) || $action == 'create' || $action == 'add') {
 			print dol_get_fiche_head('', '', '', -1);
 
 			$out = '';
+			$nb_holiday = 0;
 			$typeleaves = $object->getTypes(1, 1);
 			foreach ($typeleaves as $key => $val) {
 				$nb_type = $object->getCPforUser($user->id, $val['rowid']);
@@ -1155,7 +1159,7 @@ if ((empty($id) && empty($ref)) || $action == 'create' || $action == 'add') {
 						$errors[] = $langs->transnoentitiesnoconv('ErrorEndDateCP');
 						break;
 					case 'SQL_Create':
-						$errors[] = $langs->transnoentitiesnoconv('ErrorSQLCreateCP').' '.$_GET['msg'];
+						$errors[] = $langs->transnoentitiesnoconv('ErrorSQLCreateCP');
 						break;
 					case 'CantCreate':
 						$errors[] = $langs->transnoentitiesnoconv('CantCreateCP');
@@ -1176,7 +1180,7 @@ if ((empty($id) && empty($ref)) || $action == 'create' || $action == 'add') {
 						$errors[] = $langs->transnoentitiesnoconv('NoMotifRefuseCP');
 						break;
 					case 'mail':
-						$errors[] = $langs->transnoentitiesnoconv('ErrorMailNotSend')."\n".$_GET['error_content'];
+						$errors[] = $langs->transnoentitiesnoconv('ErrorMailNotSend');
 						break;
 				}
 
@@ -1567,6 +1571,7 @@ if ((empty($id) && empty($ref)) || $action == 'create' || $action == 'add') {
 			print '</div><div class="fichehalfright">';
 
 			$MAXEVENT = 10;
+			$morehtmlright = '';
 
 			// List of actions on element
 			include_once DOL_DOCUMENT_ROOT.'/core/class/html.formactions.class.php';
