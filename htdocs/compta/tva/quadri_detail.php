@@ -578,6 +578,10 @@ if (!is_array($x_coll) || !is_array($x_paye)) {
 							if (isset($fields['payment_amount'])) {
 								print ' (' . round($ratiopaymentinvoice * 100, 2) . '%)';
 							}
+							//erics warning for situations invoices
+							if ($ratiopaymentinvoice * 100 > 100) {
+								print "error, please check";
+							}
 						}
 						print '</td>';
 					}
