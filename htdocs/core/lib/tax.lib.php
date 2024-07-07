@@ -306,10 +306,10 @@ function tax_by_thirdparty($type, $db, $y, $date_start, $date_end, $modetax, $di
 					$list[$assoc['company_id']]['localtax2'] = 0;
 				}
 
-				//erics facture de situation - supprimer le montant de la ligne précédente
+				//erics facture de situation - supprimer le montant de la facture précédente
 				$situationInvoice = false;
 				if (!empty($assoc['fk_prev_id'])) {
-					$assocPrev = getDataForPrevInvoice($assoc['fk_prev_id'], $invoicetable,  $invoicedettable);
+					$assocPrev = getDataForPrevInvoice($assoc['fk_prev_id'], $invoicetable,  $invoicedettable, $fk_facture2, $fk_payment, $paymenttable, $paymentfacturetable);
 					$situationInvoice = true;
 				} else {
 					$assocPrev = array();
@@ -318,7 +318,7 @@ function tax_by_thirdparty($type, $db, $y, $date_start, $date_end, $modetax, $di
 
 				if ($assoc['rowid'] != $oldrowid) {       // Si rupture sur d.rowid
 					$oldrowid = $assoc['rowid'];
-					//erics facture de situation - supprimer le montant de la ligne précédente
+					//erics facture de situation - supprimer le montant de la facture précédente
 					if ($situationInvoice) {
 						$list[$assoc['company_id']]['totalht']  += ($assoc['total_ht'] - $assocPrev['total_ht']);
 						$list[$assoc['company_id']]['vat']      += ($assoc['total_vat'] - $assocPrev['total_vat']);
@@ -335,19 +335,24 @@ function tax_by_thirdparty($type, $db, $y, $date_start, $date_end, $modetax, $di
 				$list[$assoc['company_id']]['datef'][] = $db->jdate($assoc['datef']);
 				$list[$assoc['company_id']]['datep'][] = $db->jdate($assoc['datep']);
 
-				//erics facture de situation - supprimer le montant de la ligne précédente
+				//erics facture de situation - supprimer le montant de la facture précédente
 				if ($situationInvoice) {
 					$list[$assoc['company_id']]['dtotal_ttc'][] = ($assoc['total_ttc'] - $assocPrev['total_ttc']);
 					$list[$assoc['company_id']]['totalht_list'][] = ($assoc['total_ht'] - $assocPrev['total_ht']);
 					$list[$assoc['company_id']]['vat_list'][] = ($assoc['total_vat'] - $assocPrev['total_vat']);
 					$list[$assoc['company_id']]['localtax1_list'][] = ($assoc['total_localtax1'] - $assocPrev['total_localtax1']);
 					$list[$assoc['company_id']]['localtax2_list'][] = ($assoc['total_localtax2'] - $assocPrev['total_localtax2']);
+
+					//todo
+					$list[$assoc['company_id']]['payment_amount'][] = ($assoc['payment_amount'] - $assocPrev['payment_amount']);
 				} else {
 					$list[$assoc['company_id']]['dtotal_ttc'][] = $assoc['total_ttc'];
 					$list[$assoc['company_id']]['totalht_list'][] = $assoc['total_ht'];
 					$list[$assoc['company_id']]['vat_list'][] = $assoc['total_vat'];
 					$list[$assoc['company_id']]['localtax1_list'][] = $assoc['total_localtax1'];
 					$list[$assoc['company_id']]['localtax2_list'][] = $assoc['total_localtax2'];
+
+					$list[$assoc['company_id']]['payment_amount'][] = $assoc['payment_amount'];
 				}
 				$list[$assoc['company_id']]['company_name'][] = $assoc['company_name'];
 				$list[$assoc['company_id']]['company_id'][] = $assoc['company_id'];
@@ -378,7 +383,6 @@ function tax_by_thirdparty($type, $db, $y, $date_start, $date_end, $modetax, $di
 				$list[$assoc['company_id']]['ptype'][] = $assoc['ptype'];
 
 				$list[$assoc['company_id']]['payment_id'][] = $assoc['payment_id'];
-				$list[$assoc['company_id']]['payment_amount'][] = $assoc['payment_amount'];
 
 				$company_id = $assoc['company_id'];
 			}
@@ -542,10 +546,10 @@ function tax_by_thirdparty($type, $db, $y, $date_start, $date_end, $modetax, $di
 					$list[$assoc['company_id']]['localtax2'] = 0;
 				}
 
-				//erics facture de situation - supprimer le montant de la ligne précédente
+				//erics facture de situation - supprimer le montant de la facture précédente
 				$situationInvoice = false;
 				if (!empty($assoc['fk_prev_id'])) {
-					$assocPrev = getDataForPrevInvoice($assoc['fk_prev_id'], $invoicetable,  $invoicedettable);
+					$assocPrev = getDataForPrevInvoice($assoc['fk_prev_id'], $invoicetable,  $invoicedettable, $fk_facture2, $fk_payment, $paymenttable, $paymentfacturetable);
 					$situationInvoice = true;
 				} else {
 					$assocPrev = array();
@@ -553,7 +557,7 @@ function tax_by_thirdparty($type, $db, $y, $date_start, $date_end, $modetax, $di
 
 				if ($assoc['rowid'] != $oldrowid) {       // Si rupture sur d.rowid
 					$oldrowid = $assoc['rowid'];
-					//erics facture de situation - supprimer le montant de la ligne précédente
+					//erics facture de situation - supprimer le montant de la facture précédente
 					if ($situationInvoice) {
 						$list[$assoc['company_id']]['totalht']   += ($assoc['total_ht'] - $assocPrev['total_ht']);
 						$list[$assoc['company_id']]['vat']       += ($assoc['total_vat'] - $assocPrev['total_vat']);
@@ -570,19 +574,25 @@ function tax_by_thirdparty($type, $db, $y, $date_start, $date_end, $modetax, $di
 				$list[$assoc['company_id']]['datef'][] = $db->jdate($assoc['datef']);
 				$list[$assoc['company_id']]['datep'][] = $db->jdate($assoc['datep']);
 
-				//erics facture de situation - supprimer le montant de la ligne précédente
+				//erics facture de situation - supprimer le montant de la facture précédente
 				if ($situationInvoice) {
 					$list[$assoc['company_id']]['dtotal_ttc'][] = ($assoc['total_ttc'] - $assocPrev['total_ttc']);
 					$list[$assoc['company_id']]['totalht_list'][] = ($assoc['total_ht'] - $assocPrev['total_ht']);
 					$list[$assoc['company_id']]['vat_list'][] = ($assoc['total_vat'] - $assocPrev['total_vat']);
 					$list[$assoc['company_id']]['localtax1_list'][] = ($assoc['total_localtax1'] - $assocPrev['total_localtax1']);
 					$list[$assoc['company_id']]['localtax2_list'][] = ($assoc['total_localtax2'] - $assocPrev['total_localtax2']);
+
+					//TODO
+					$list[$assoc['company_id']]['payment_amount'][] = ($assoc['payment_amount'] - $assocPrev['payment_amount']);
 				} else {
 					$list[$assoc['company_id']]['dtotal_ttc'][] = $assoc['total_ttc'];
 					$list[$assoc['company_id']]['totalht_list'][] = $assoc['total_ht'];
 					$list[$assoc['company_id']]['vat_list'][] = $assoc['total_vat'];
 					$list[$assoc['company_id']]['localtax1_list'][] = $assoc['total_localtax1'];
 					$list[$assoc['company_id']]['localtax2_list'][] = $assoc['total_localtax2'];
+
+
+					$list[$assoc['company_id']]['payment_amount'][] = $assoc['payment_amount'];
 				}
 
 
@@ -615,7 +625,6 @@ function tax_by_thirdparty($type, $db, $y, $date_start, $date_end, $modetax, $di
 
 				$list[$assoc['company_id']]['payment_id'][] = $assoc['payment_id'];
 				$list[$assoc['company_id']]['payment_ref'][] = $assoc['payment_ref'];
-				$list[$assoc['company_id']]['payment_amount'][] = $assoc['payment_amount'];
 
 				$company_id = $assoc['company_id'];
 			}
@@ -931,7 +940,6 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 		}
 		$sql .= " ORDER BY d.rowid, d.".$fk_facture.", pf.rowid";
 	}
-
 	if (!$sql) {
 		return -1;
 	}
@@ -965,10 +973,10 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 					$list[$rate_key]['localtax2'] = 0;
 				}
 
-				//erics facture de situation - supprimer le montant de la ligne précédente
+				//erics facture de situation - supprimer le montant de la facture précédente
 				$situationInvoice = false;
 				if (!empty($assoc['fk_prev_id'])) {
-					$assocPrev = getDataForPrevInvoice($assoc['fk_prev_id'], $invoicetable,  $invoicedettable);
+					$assocPrev = getDataForPrevInvoice($assoc['fk_prev_id'], $invoicetable,  $invoicedettable, $fk_facture2, $fk_payment, $paymenttable, $paymentfacturetable);
 					$situationInvoice = true;
 				} else {
 					$assocPrev = array();
@@ -976,7 +984,7 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 
 				if ($assoc['rowid'] != $oldrowid) {       // Si rupture sur d.rowid
 					$oldrowid = $assoc['rowid'];
-					//erics facture de situation - supprimer le montant de la ligne précédente
+					//erics facture de situation - supprimer le montant de la facture précédente
 					if ($situationInvoice) {
 						$list[$rate_key]['totalht']   += ($assoc['total_ht'] - $assocPrev['total_ht']);
 						$list[$rate_key]['vat']       += ($assoc['total_vat'] - $assocPrev['total_vat']);
@@ -993,19 +1001,25 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 				$list[$rate_key]['datef'][] = $db->jdate($assoc['datef']);
 				$list[$rate_key]['datep'][] = $db->jdate($assoc['datep']);
 
-				//erics facture de situation - supprimer le montant de la ligne précédente
+				//erics facture de situation - supprimer le montant de la facture précédente
 				if ($situationInvoice) {
 					$list[$rate_key]['dtotal_ttc'][] = ($assoc['total_ttc'] - $assocPrev['total_ttc']);
 					$list[$rate_key]['totalht_list'][] = ($assoc['total_ht'] - $assocPrev['total_ht']);
 					$list[$rate_key]['vat_list'][] = ($assoc['total_vat'] - $assocPrev['total_vat']);
 					$list[$rate_key]['localtax1_list'][] = ($assoc['total_localtax1'] - $assocPrev['total_localtax1']);
 					$list[$rate_key]['localtax2_list'][] = ($assoc['total_localtax2'] - $assocPrev['total_localtax2']);
+
+					//TODO
+					$list[$rate_key]['payment_amount'][] = ($assoc['payment_amount'] - $assocPrev['payment_amount']);
 				} else {
 					$list[$rate_key]['dtotal_ttc'][] = $assoc['total_ttc'];
 					$list[$rate_key]['totalht_list'][] = $assoc['total_ht'];
 					$list[$rate_key]['vat_list'][] = $assoc['total_vat'];
 					$list[$rate_key]['localtax1_list'][] = $assoc['total_localtax1'];
 					$list[$rate_key]['localtax2_list'][] = $assoc['total_localtax2'];
+
+
+					$list[$rate_key]['payment_amount'][] = $assoc['payment_amount'];
 				}
 
 				$list[$rate_key]['company_name'][] = $assoc['company_name'];
@@ -1041,7 +1055,6 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 
 				$list[$rate_key]['payment_id'][] = $assoc['payment_id'];
 				$list[$rate_key]['payment_ref'][] = $assoc['payment_ref'];
-				$list[$rate_key]['payment_amount'][] = $assoc['payment_amount'];
 
 				$rate = $assoc['rate'];
 			}
@@ -1111,6 +1124,8 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 		if (!empty($conf->global->MAIN_NOT_INCLUDE_ZERO_VAT_IN_REPORTS)) {
 			$sql .= " AND (d.".$f_rate." <> 0 OR d.".$total_tva." <> 0)";
 		}
+		//erics
+		// $sql .= " AND d.total_ht > 0";
 		$sql .= " ORDER BY d.rowid, d.".$fk_facture;
 	} else {
 		// Count on payments date
@@ -1169,8 +1184,11 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 		if (!empty($conf->global->MAIN_NOT_INCLUDE_ZERO_VAT_IN_REPORTS)) {
 			$sql .= " AND (d.".$f_rate." <> 0 OR d.".$total_tva." <> 0)";
 		}
+		//erics
+		// $sql .= " AND d.total_ht > 0";
 		$sql .= " ORDER BY d.rowid, d.".$fk_facture.", pf.rowid";
 	}
+	// print "<p>$sql</p>";
 
 	if (!$sql) {
 		dol_syslog("Tax.lib.php::tax_by_rate no accountancy module enabled".$sql, LOG_ERR);
@@ -1205,18 +1223,20 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 					$list[$rate_key]['localtax2'] = 0;
 				}
 
-				//erics facture de situation - supprimer le montant de la ligne précédente
+				//erics facture de situation - supprimer le montant de la facture précédente
 				$situationInvoice = false;
 				if (!empty($assoc['fk_prev_id'])) {
-					$assocPrev = getDataForPrevInvoice($assoc['fk_prev_id'], $invoicetable,  $invoicedettable);
+					$assocPrev = getDataForPrevInvoice($assoc['fk_prev_id'], $invoicetable,  $invoicedettable, $fk_facture2, $fk_payment, $paymenttable, $paymentfacturetable);
 					$situationInvoice = true;
+					//"total_ht":"1075.00000000","total_ttc":"1290.00000000","total_vat":"215.00000000","total_localtax1":"0.00000000",
+					//"total_localtax2":"0.00000000","situation_percent":"50","ftotal_ttc":"4140.00000000"
 				} else {
 					$assocPrev = array();
 				}
 
 				if ($assoc['rowid'] != $oldrowid) {       // Si rupture sur d.rowid
 					$oldrowid = $assoc['rowid'];
-					//erics facture de situation - supprimer le montant de la ligne précédente
+					//erics facture de situation - supprimer le montant de la facture précédente
 					if ($situationInvoice) {
 						$list[$rate_key]['totalht']   += ($assoc['total_ht'] - $assocPrev['total_ht']);
 						$list[$rate_key]['vat']       += ($assoc['total_vat'] - $assocPrev['total_vat']);
@@ -1233,19 +1253,26 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 				$list[$rate_key]['datef'][] = $db->jdate($assoc['datef']);
 				$list[$rate_key]['datep'][] = $db->jdate($assoc['datep']);
 
-				//erics facture de situation - supprimer le montant de la ligne précédente
+				//erics facture de situation - supprimer le montant de la facture précédente
 				if ($situationInvoice) {
 					$list[$rate_key]['dtotal_ttc'][] = ($assoc['total_ttc'] - $assocPrev['total_ttc']);
 					$list[$rate_key]['totalht_list'][] = ($assoc['total_ht'] - $assocPrev['total_ht']);
 					$list[$rate_key]['vat_list'][] = ($assoc['total_vat'] - $assocPrev['total_vat']);
 					$list[$rate_key]['localtax1_list'][] = ($assoc['total_localtax1'] - $assocPrev['total_localtax1']);
 					$list[$rate_key]['localtax2_list'][] = ($assoc['total_localtax2'] - $assocPrev['total_localtax2']);
+
+					$list[$rate_key]['ftotal_ttc'][] = ($assoc['total_ttc'] - $assocPrev['total_ttc']);
+					//verifier
+					$list[$rate_key]['payment_amount'][] = ($assoc['total_ttc'] - $assocPrev['total_ttc']);
 				} else {
 					$list[$rate_key]['dtotal_ttc'][] = $assoc['total_ttc'];
 					$list[$rate_key]['totalht_list'][] = $assoc['total_ht'];
 					$list[$rate_key]['vat_list'][] = $assoc['total_vat'];
 					$list[$rate_key]['localtax1_list'][] = $assoc['total_localtax1'];
 					$list[$rate_key]['localtax2_list'][] = $assoc['total_localtax2'];
+
+					$list[$rate_key]['ftotal_ttc'][] = $assoc['ftotal_ttc'];
+					$list[$rate_key]['payment_amount'][] = $assoc['payment_amount'];
 				}
 
 				$list[$rate_key]['company_name'][] = $assoc['company_name'];
@@ -1283,13 +1310,7 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 				$list[$rate_key]['facid'][] = $assoc['facid'];
 				$list[$rate_key]['facnum'][] = $assoc['facnum'];
 				$list[$rate_key]['type'][] = $assoc['type'];
-				$list[$rate_key]['ftotal_ttc'][] = $assoc['ftotal_ttc'];
 				$list[$rate_key]['descr'][] = $assoc['descr'];
-
-				$list[$rate_key]['totalht_list'][] = $assoc['total_ht'];
-				$list[$rate_key]['vat_list'][] = $assoc['total_vat'];
-				$list[$rate_key]['localtax1_list'][] = $assoc['total_localtax1'];
-				$list[$rate_key]['localtax2_list'][] = $assoc['total_localtax2'];
 
 				$list[$rate_key]['pid'][] = $assoc['pid'];
 				$list[$rate_key]['pref'][] = $assoc['pref'];
@@ -1297,7 +1318,6 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 
 				$list[$rate_key]['payment_id'][] = $assoc['payment_id'];
 				$list[$rate_key]['payment_ref'][] = $assoc['payment_ref'];
-				$list[$rate_key]['payment_amount'][] = $assoc['payment_amount'];
 
 				$rate = $rate_key;
 			}
@@ -1344,6 +1364,8 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 		if (!empty($conf->global->MAIN_NOT_INCLUDE_ZERO_VAT_IN_REPORTS)) {
 			$sql .= " AND (d.".$f_rate." <> 0 OR d.total_tva <> 0)";
 		}
+		//erics
+		// $sql .= " AND d.total_ht > 0";
 		$sql .= " ORDER BY e.rowid";
 
 		if (!$sql) {
@@ -1427,24 +1449,34 @@ function tax_by_rate($type, $db, $y, $q, $date_start, $date_end, $modetax, $dire
 	return $list;
 }
 
-/**
- * special for situation invoices
- *
- * @param   [type]  $id        [$id description]
- * @param   [type]  $table     [$table description]
- * @param   [type]  $tabledet  [$tabledet description]
- *
- * @return  [type]             [return description]
- */
-function getDataForPrevInvoice($id, $table, $tabledet)
+ /**
+  * special for situation invoices : get data of previous invoice then we could make diff
+  *
+  * @param   [type]  $id                   [$id description]
+  * @param   [type]  $table                [$table description]
+  * @param   [type]  $tabledet             [$tabledet description]
+  * @param   [type]  $fk_facture2          [$fk_facture2 description]
+  * @param   [type]  $fk_payment           [$fk_payment description]
+  * @param   [type]  $paymenttable         [$paymenttable description]
+  * @param   [type]  $paymentfacturetable  [$paymentfacturetable description]
+  *
+  * @return  [type]                        [return description]
+  */
+function getDataForPrevInvoice($id, $table, $tabledet, $fk_facture2, $fk_payment, $paymenttable, $paymentfacturetable)
 {
 	global $db;
+
 	$sql = "SELECT d.total_ht as total_ht, d.total_ttc as total_ttc, d.total_tva as total_vat ";
 	$sql .= ", d.total_localtax1 as total_localtax1, d.total_localtax2 as total_localtax2, d.situation_percent as situation_percent ";
-	$sql .= ", f.total_ttc as ftotal_ttc ";
-	$sql .= " FROM ".MAIN_DB_PREFIX."$tabledet as d";
-	$sql .= " LEFT JOIN ".MAIN_DB_PREFIX."$table as f on d.fk_facture = f.rowid";
+	$sql .= ", f.total_ttc as ftotal_ttc, pf.amount as payment_amount ";
+	$sql .= " FROM ".MAIN_DB_PREFIX."$tabledet as d,";
+	$sql .= " ".MAIN_DB_PREFIX.$paymentfacturetable." as pf,";
+	$sql .= " ".MAIN_DB_PREFIX.$paymenttable." as pa,";
+	$sql .= " ".MAIN_DB_PREFIX."$table as f";
 	$sql .= " WHERE d.rowid='$id'";
+	$sql .= " AND d.fk_facture = f.rowid";
+	$sql .= " AND pf.".$fk_facture2." = f.rowid";
+	$sql .= " AND pa.rowid = pf.".$fk_payment;
 	$resql = $db->query($sql);
 	// print "<p> Situation Det : $sql</p>";
 	$assoc = array();
