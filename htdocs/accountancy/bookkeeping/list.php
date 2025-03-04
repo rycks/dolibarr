@@ -640,9 +640,9 @@ if (count($filter) > 0) {
 			$sqlwhere[] = 't.lettering_code IS NULL';
 		} elseif ($key == 't.code_journal' && !empty($value)) {
 			if (is_array($value)) {
-				$sqlwhere[] = natural_search("t.code_journal", join(',', $value), 3, 1);
+				$sqlwhere[] = "t.code_journal IN ('" . join(",", $value) . "')";
 			} else {
-				$sqlwhere[] = natural_search("t.code_journal", $value, 3, 1);
+				$sqlwhere[] = "t.code_journal = '" . $db->escape($value) . "'";
 			}
 		} elseif ($key == 't.search_accounting_code_in' && !empty($value)) {
 			$sqlwhere[] = 't.numero_compte IN ('.$db->sanitize($value, 1).')';
