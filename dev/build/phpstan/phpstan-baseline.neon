@@ -26257,12 +26257,6 @@ parameters:
 			path: ../../../htdocs/societe/website.php
 
 		-
-			message: '#^Parameter \#1 \$params of static method Stripe\\Terminal\\Location\:\:all\(\) expects array\|null, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: ../../../htdocs/stripe/admin/stripe.php
-
-		-
 			message: '#^Call to function is_object\(\) with Facture will always evaluate to true\.$#'
 			identifier: function.alreadyNarrowedType
 			count: 1
@@ -26446,24 +26440,6 @@ parameters:
 			message: '#^Negated boolean expression is always true\.$#'
 			identifier: booleanNot.alwaysTrue
 			count: 6
-			path: ../../../htdocs/supplier_proposal/class/supplier_proposal.class.php
-
-		-
-			message: '#^Parameter \#3 \$remise_percent_ligne of function calcul_price_total expects float, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: ../../../htdocs/supplier_proposal/class/supplier_proposal.class.php
-
-		-
-			message: '#^Parameter \#5 \$uselocaltax1_rate of function calcul_price_total expects float, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: ../../../htdocs/supplier_proposal/class/supplier_proposal.class.php
-
-		-
-			message: '#^Parameter \#6 \$uselocaltax2_rate of function calcul_price_total expects float, string given\.$#'
-			identifier: argument.type
-			count: 2
 			path: ../../../htdocs/supplier_proposal/class/supplier_proposal.class.php
 
 		-
