@@ -75,16 +75,17 @@ repos:
         stages: [manual]  # To run: pre-commit run -a --hook-stage=manual actionlint
 
   # Beautify shell scripts
-  #- repo: https://github.com/lovesegfault/beautysh.git
-  #  rev: v6.4.2
-  #  hooks:
-  #    - id: beautysh
-  #      exclude: |
-  #        (?x)^(dev/setup/git/hooks/pre-commit
-  #             |dev/initdemo/initdemo.sh          # indent/outdent mismatch
-  #             |dev/build/debian/dolibarr.postrm  # indent/outdent mismatch
-  #             )$
-  #      args: [--tab]
+  - repo: https://github.com/lovesegfault/beautysh.git
+    rev: v6.4.3
+    hooks:
+      - id: beautysh
+        stages: [manual]  # To run: pre-commit run -a --hook-stage=manual beautysh
+        exclude: |
+          (?x)^(dev/setup/git/hooks/pre-commit
+               |dev/initdemo/initdemo.sh          # indent/outdent mismatch
+               |dev/build/debian/dolibarr.postrm  # indent/outdent mismatch
+               )$
+        args: [--tab]
 
   # Run local script
   #

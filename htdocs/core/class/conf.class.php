@@ -1461,7 +1461,7 @@ class Conf extends stdClass
 			if (isModEnabled('syslog')) {
 				// We init log handlers
 				if (!empty($this->global->SYSLOG_HANDLERS)) {
-					$handlers = json_decode($this->global->SYSLOG_HANDLERS);
+					$handlers = json_decode($this->global->SYSLOG_HANDLERS) ?? array();
 				} else {
 					$handlers = array();
 				}
